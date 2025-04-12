@@ -5,7 +5,7 @@ $nav_index = "active";
 include_once 'includes/navbar.php';
 include_once 'includes/loginForm.php';
 
-if ($_SESSION['login_popup']):
+if ($_SESSION['login_popup'] ?? false):
     if(!isset($_SESSION['userId'])):?>
     <script>
          $(document).ready(function() {
@@ -15,6 +15,7 @@ if ($_SESSION['login_popup']):
     </script>
 <?php endif;endif;
 $_SESSION['login_popup'] = false;
+
 ?>
 
 <script>
@@ -24,15 +25,14 @@ $_SESSION['login_popup'] = false;
         const password = $('#password').val();
         if(username && password) {
             $.ajax({
-                url: 'login.php',
+                url: 'server/login.php',
                 type: 'POST',
                 data: {username: username, password: password},
                 success: function(response) {
                     if(response.success) {
-                    window.location.href = response.redirectPage || 'index.php';
-                    showNotification('success', response.notifMessage);
+                        window.location.href = response.redirectPage || 'index.php';
                     } else {
-                    showNotification('warning', response.notifMessage);
+                        showNotification('warning', response.notifMessage);
                     }
                 },
                 error: function() {

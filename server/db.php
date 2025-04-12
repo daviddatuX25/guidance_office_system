@@ -4,7 +4,7 @@ class Database {
     private $db_name = 'guidance_db';
     private $username = 'root';
     private $password = '';
-    public $conn;
+    protected $conn;
 
     public function getConnection() {
         $this->conn = null;
@@ -17,11 +17,12 @@ class Database {
         return $this->conn;
     }
 
-    public function query($sql, $params = array()) {
+   public function query($sql, $params = []) {
         $stmt = $this->conn->prepare($sql);
         if (!empty($params)) {
             foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value);
+                $type = is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR;
+                $stmt->bindValue($key, $value, $type);
             }
         }
         $stmt->execute();
@@ -134,6 +135,104 @@ class Database {
 
     public function lastInsertId() {
         return $this->conn->lastInsertId();
+    }
+
+    // Helper function to build JOIN clauses
+    public function buildJoins($joins) {
+        $joinSql = '';
+        foreach ($joins as $join) {
+            $joinSql .= " {$join['type']} JOIN {$join['table']} ON {$join['on']}";
+        }
+        return $joinSql;
+    }
+
+    // Helper function to build WHERE clauses
+    public function buildFilters($filters) {
+        $filterSql = '';
+        $params = [];
+        if (!empty($filters)) {
+            $conditions = [];
+            foreach ($filters as $key => $value) {
+                $conditions[] = "$key = :$key";
+                $params[":$key"] = $value;
+            }
+            $filterSql = " WHERE " . implode(" AND ", $conditions);
+        }
+        return [$filterSql, $params];
+    }
+
+    // Helper function to build search conditions
+    public function buildSearch($searchValue, $searchableColumns) {
+        $searchSql = '';
+        $params = [];
+        if (!empty($searchValue)) {
+            $conditions = [];
+            foreach ($searchableColumns as $column) {
+                $conditions[] = "$column LIKE :search";
+            }
+            $searchSql = " (" . implode(" OR ", $conditions) . ")";
+            $params[':search'] = "%$searchValue%";
+        }
+        return [$searchSql, $params];
+    }
+
+    // Helper function to build pagination
+    public function buildPagination($start, $length) {
+        return " LIMIT :start, :length";
+    }
+
+    // Simplified datatableFetch function
+    public function datatableFetch($baseTable, $columns, $joins = [], $filters = [], $searchableColumns = [], $orderColumn = 'id', $orderDir = 'ASC', $start = 0, $length = 10, $searchValue = '') {
+        // Build SELECT and FROM
+        $sql = "SELECT " . implode(", ", $columns) . " FROM $baseTable";
+
+        // Add JOIN clauses
+        $sql .= $this->buildJoins($joins);
+
+        // Add WHERE clauses for filters
+        [$filterSql, $filterParams] = $this->buildFilters($filters);
+        $sql .= $filterSql;
+
+        // Add search conditions
+        [$searchSql, $searchParams] = $this->buildSearch($searchValue, $searchableColumns);
+        if (!empty($searchSql)) {
+            $sql .= empty($filterSql) ? " WHERE $searchSql" : " AND $searchSql";
+        }
+
+        // Add ORDER BY and LIMIT
+        $sql .= " ORDER BY $orderColumn $orderDir";
+        $sql .= $this->buildPagination($start, $length);
+
+        // Prepare and execute
+        $stmt = $this->conn->prepare($sql);
+        foreach (array_merge($filterParams, $searchParams) as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':start', $start, PDO::PARAM_INT);
+        $stmt->bindValue(':length', $length, PDO::PARAM_INT);
+        $stmt->execute();
+
+        // Fetch data
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get total records
+        $countSql = "SELECT COUNT(*) FROM $baseTable";
+        $countSql .= $this->buildJoins($joins);
+        $countSql .= $filterSql;
+        $countStmt = $this->conn->prepare($countSql);
+        foreach ($filterParams as $key => $value) {
+            $countStmt->bindValue($key, $value);
+        }
+        $countStmt->execute();
+        $totalRecords = $countStmt->fetchColumn();
+
+        // Return DataTables response
+        return [
+            "draw" => intval($_POST['draw'] ?? 0),
+            "recordsTotal" => $totalRecords,
+            "recordsFiltered" => count($data),
+            "data" => $data
+        ];
     }
 }
 ?>

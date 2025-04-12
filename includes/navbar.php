@@ -18,16 +18,3 @@
     <?php endif; ?>
 
 </nav>
-
-<script>
-    $(document).ready(function() {
-        $('#logout-button').click(function() {
-            $.ajax({
-                url: 'logout.php',
-                success: ()=>{
-                    window.location.href = 'index.php';
-                }
-            });
-        });
-    });
-</script>
