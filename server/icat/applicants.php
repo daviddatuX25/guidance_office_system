@@ -2,7 +2,10 @@
 error_reporting(E_ALL & ~E_DEPRECATED);
 ini_set('display_errors', 1);
 
+require_once '../../verify.php';
+
 require_once '../db.php';
+
 require_once '../DataTable.php';
 
 $db = new Database();
@@ -10,8 +13,9 @@ $conn = $db->getConnection();
 $dataTable = new DataTable($db);
 
 header('Content-Type: application/json');
-
+error_log("POST Data: " . print_r($_POST, true));
 // Define columns
+print_r($_POST, true);
 $columns = [
     'a.applicant_no',
     'a.lastname',
@@ -37,7 +41,7 @@ $joins = [
 ];
 
 // Define filters
-$filters = [];
+$filters = []; // Default filter
 if (!empty($_POST['application_term'])) {
     $filters['a.application_term_id'] = $_POST['application_term'];
 }

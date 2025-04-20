@@ -1,9 +1,5 @@
-<nav class="navbar navbar-expand navbar-light bg-light">
-    <?php if(isset($nav_icat)):?>
-        <button class="btn d-md-none mx-3" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-expanded="false" aria-controls="sidebarMenu">
-            <i class="fas fa-bars text-primary"></i>
-        </button>    
-    <?php endif;?>
+<nav class="navbar navbar-expand navbar-light bg-light sticky-top">
+    <div class="w-50 d-block d-md-none"></div>
     <div class="container justify-content-center">
         <div class="nav navbar-nav">
             <a class="nav-item nav-link <?=$nav_index ?? '';?>" href="index.php" aria-current="page">Home</a>

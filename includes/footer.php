@@ -47,6 +47,24 @@
                 }
             });
         });
+
+        // // Check if a nav item is saved in localStorage
+        // const lastTab = localStorage.getItem('lastTab');
+        // if (lastTab) {
+        //     // Activate the saved tab
+        //     $(`#${lastTab}-tab`).addClass('active');
+        //     $(`#${lastTab}`).addClass('show active');
+        //     $('.tab-pane').not(`#${lastTab}`).removeClass('show active');
+        //     $('.nav-link').not(`#${lastTab}-tab`).removeClass('active');
+        // }
+
+        // // Save the selected nav item to localStorage on click
+        // $('.nav-link').on('click', function () {
+        //     const tabId = $(this).attr('id').replace('-tab', '');
+        //     localStorage.setItem('lastTab', tabId);
+        // });
+        
+        
     });
 </script>
 

@@ -12,8 +12,7 @@
     <script defer src="./libraries/bootstrap.bundle.js"></script> <!-- Bootstrap JS Bundle with Popper -->
     <script defer src="./libraries/DataTables/datatables.min.js"></script> <!-- DataTables JS -->
     <script src="./libraries/jquery.js"></script> <!-- jQuery library -->
-    <script src="./src/js/main_script.js"></script> <!-- Main script -->
-    <script defer src="./src/js/datatable_script.js"></script> <!-- DataTable script -->
+    <script src="./src/js/main.js"></script> <!-- Main script -->
 </head>
 <body>
 

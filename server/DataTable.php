@@ -7,56 +7,82 @@ class DataTable {
     }
 
     // Helper function to build JOIN clauses
-    private function buildJoins($joins) {
+    protected function buildJoins($joins) {
         $joinSql = '';
         foreach ($joins as $join) {
-            $joinSql .= " {$join['type']} JOIN {$join['table']} ON {$join['on']}";
+            $joinSql .= " {$join['type']} JOIN {$join['table']} ON {$join['on']} ";
         }
         return $joinSql;
     }
 
-    // Helper function to build WHERE clauses
-    private function buildFilters($filters) {
-        $filterSql = '';
-        $params = [];
-        if (!empty($filters)) {
-            $conditions = [];
+    // Helper function to build filter
+    protected function buildFilters($filters) {
+        if (!empty($filters) && is_array($filters)) {
+            $filterSql = 'WHERE 1=1';
             foreach ($filters as $key => $value) {
-                $conditions[] = "$key = :$key";
-                $params[":$key"] = $value;
+                if (is_array($value)) {
+                    $safeValues = array_map('intval', $value); // Assumes integers
+                    $filterSql .= " AND $key IN (" . implode(',', $safeValues) . ")";
+                } else {
+                    // Quote strings to avoid syntax errors
+                    $safeValue = is_numeric($value) ? $value : "'" . addslashes($value) . "'";
+                    $filterSql .= " AND $key = $safeValue";
+                }
             }
-            $filterSql = " WHERE " . implode(" AND ", $conditions);
+            return $filterSql;
         }
-        return [$filterSql, $params];
+        return '';
     }
 
+    // Helper function to get total records
+    protected function getTotalRecords($arr) {
+        if (empty($arr)) return 0;
+        $total = 0;
+        foreach ($arr as $row) {
+            if (isset($row['id'])) {
+                $total++;
+            }
+        }
+        return $total;
+    }
+    
     public function fetch($baseTable, $columns, $joins = [], $filters = []) {
         // Build SELECT and FROM
-        $sql = "SELECT " . implode(", ", $columns) . " FROM $baseTable";
+        $sql = "SELECT " . implode(", ", $columns) . " FROM $baseTable ";
 
         // Add JOIN clauses
         $sql .= $this->buildJoins($joins);
 
-        // Add WHERE clauses for filters
-        [$filterSql, $filterParams] = $this->buildFilters($filters);
-        $sql .= $filterSql;
+        // Add WHERE clauses for filters 
+        $sql .= $this->buildFilters($filters);
 
-        // Execute query
-        $stmt = $this->db->query($sql, $filterParams);
+        // Execute query with parameters
+        $stmt = $this->db->query($sql);
+
+// Disabled since AJAX PROCESSING is not used
+        // // Paginate
+        // if (isset($_POST['start']) && isset($_POST['length'])) {
+        //     $sql .= " LIMIT :start, :length";
+        //     $stmt->bindValue(':start', intval($_POST['start']), PDO::PARAM_INT);
+        //     $stmt->bindValue(':length', intval($_POST['length']), PDO::PARAM_INT);
+        // }
+
+        // // Order by if provided
+        // if (isset($_POST['order'])) {
+        //     $orderBy = $_POST['columns'][$_POST['order'][0]['column']]['data'] . ' ' . $_POST['order'][0]['dir'];
+        //     $sql .= " ORDER BY $orderBy";
+        // }
+        
+        // Execute the final query
         $data = $this->db->fetchAll($stmt);
 
         // Get total records
-        $countSql = "SELECT COUNT(*) FROM $baseTable";
-        $countSql .= $this->buildJoins($joins);
-        $countSql .= $filterSql;
-        $countStmt = $this->db->query($countSql, $filterParams);
-        $totalRecords = $this->db->fetch($countStmt)['COUNT(*)'];
+        $totalRecords = $this->getTotalRecords($data);
 
         // Return DataTables response
         return [
             "draw" => intval($_POST['draw'] ?? 0),
             "recordsTotal" => $totalRecords,
-            "recordsFiltered" => $totalRecords, // No filtering applied on the client side
             "data" => $data
         ];
     }
