@@ -1,72 +1,70 @@
-function viewApplication(id) {
-    // Popup window
-    const viewModal = document.getElementById('viewApplicationModal')
-    const bs_modal = new bootstrap.Modal(viewModal);
-    bs_modal.show();
+$(document).ready(function () {
 
-    // Get data relateds
-    console.log("View application with ID:", id);
-}
-
-function editApplication(id) {
-    console.log("Edit application with ID:", id);
-}
-
-function deleteApplication(id) {
-    console.log("Delete application with ID:", id);
-}
-
-$(document).ready(function() {
-
-    // Load the selected term from localStorage if available
-    const selectedETerm = localStorage.getItem('selectedEnrollmentTerm');
-    if (selectedETerm) {
-        $('#application_term').val(selectedETerm);
-    } else {
-        $('#application_term').val('');
+    // Load current application term selected
+    const $termSelect = $('#application_term');
+    const savedTerm = localStorage.getItem('selectedEnrollmentTerm');
+    if (savedTerm) {
+        $termSelect.val(savedTerm);
+        $('#addApplicantTerm').val(savedTerm);
     }
-        
+
+    // Handle change event
+    $termSelect.change(function () {
+        const selected = $(this).val();
+        const saved = localStorage.getItem('selectedEnrollmentTerm');
+        if (selected !== saved) {
+            localStorage.setItem('selectedEnrollmentTerm', selected);
+            table.ajax.reload(null, true);
+            $('#addApplicantTerm').val(selected);
+        }
+    });
+
+    // Initialize DataTable
     const table = $('#applicantTable').DataTable({
         processing: true,
-        serverSide: false,
+        serverSide: true, // Enable server-side processing
         ajax: {
-            url: './server/icat/applicants.php',
+            url: 'server/icat/applicant_info.php', // Backend endpoint
             type: 'POST',
             data: function(d) {
-                d.application_term = $('#application_term').val();
+                d.action = 'datatable'; // Add custom action parameter
+                d.application_term = $termSelect.val(); // Pass additional parameters if needed
             },
-            error: function(xhr, error, code) {
+            error: function(xhr) {
                 console.error("AJAX Error:", xhr.responseText);
             }
         },
         columns: [
             {
-                data: null,
+                data: "application_id",
+                render: function(data) {
+                    return `<input type="checkbox" class="applicant-checkbox" value="${data}">`;
+                },
                 orderable: false,
-                searchable: false,
-                render: function(data, type, row) {
-                    return `<input type="checkbox" class="applicant-checkbox" value="${row.id}">`;
-                }
+                searchable: false
             },
             { data: "applicant_no" },
             { data: "lastname" },
             { data: "firstname" },
             { data: "middlename" },
-            { data: "suffix" },
             { data: "sex" },
             { data: "strand" },
             { data: "course_1" },
-            { data: "course_2" },
-            { data: "course_3" },
             { data: "test_status" },
             {
                 data: "application_id",
-                render: function(data, type, row) {
+                render: function(data) {
                     return `
                         <div class="d-flex justify-content-center">
-                            <i class="fa-solid fa-eye px-1" onclick="viewApplication(${data})"></i>
-                            <i class="fa-solid fa-pen-to-square px-1" onclick="editApplication(${data})"></i>
-                            <i class="fa-solid fa-trash px-1" onclick="deleteApplication(${data})"></i>
+                            <button type="button" class="btn p-0 border-0 bg-transparent view-applicant" data-id="${data}">
+                                <i class="fa-solid fa-eye px-1"></i>
+                            </button>
+                            <button type="button" class="btn p-0 border-0 bg-transparent edit-applicant" data-id="${data}">
+                                <i class="fa-solid fa-pen-to-square px-1"></i>
+                            </button>
+                            <button type="button" class="btn p-0 border-0 bg-transparent delete-applicant" data-id="${data}">
+                                <i class="fa-solid fa-trash px-1"></i>
+                            </button>
                         </div>
                     `;
                 },
@@ -75,53 +73,302 @@ $(document).ready(function() {
             }
         ],
         scrollX: true,
-        fixedColumns: {
-            leftColumns: 1
-        },
-        columnDefs: [
-            { width: '30px', targets: 0 },  // Fixed pixel widths for consistency
-            { width: '80px', targets: 1 },
-            { width: '120px', targets: 2 },
-            { width: '120px', targets: 3 },
-            { width: '80px', targets: 4 },
-            { width: '60px', targets: 5 },
-            { width: '60px', targets: 6 },
-            { width: '80px', targets: 7 },
-            { width: '80px', targets: 8 },
-            { width: '80px', targets: 9 },
-            { width: '80px', targets: 10 },
-            { width: '100px', targets: 11 },
-            { width: '80px', targets: 12 }
-        ],
         pageLength: 10,
-        lengthMenu: [5, 10, 25, 50, 100, {label: 'All', value: -1}], 
-        drawCallback: function(settings) {
-            this.api().columns.adjust();
-            if (this.api().responsive) {
-                this.api().responsive.recalc();
+        lengthMenu: [5, 10, 25, 50, 100, { label: 'All', value: -1 }]
+    }).on('draw', function () {
+        // Update the checkbox state after each draw
+        const allChecked = $('.applicant-checkbox:checked').length === $('.applicant-checkbox').length;
+        $('#checkAll').prop('checked', allChecked);
+    });
+});
+
+
+// Load applicant data into the modal for viewing
+$(document).on('click', '.view-applicant', function () {
+    const applicantId = $(this).data('id'); // Get the applicant ID from the button's data attribute
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'GET',
+        data: { action: 'view', id: applicantId },
+        dataType: 'json',
+        success: function (response) {
+            if (response.success) {
+                const applicant = response.data;
+                $('#viewApplicantNo').text(applicant.applicant_no);
+                $('#viewApplicationTerm').text(applicant.application_term);
+                $('#viewLastname').text(applicant.lastname);
+                $('#viewFirstname').text(applicant.firstname);
+                $('#viewMiddlename').text(applicant.middlename);
+                $('#viewSuffix').val(applicant.suffix);
+                $('#viewSex').text(applicant.sex);
+                $('#viewStrand').text(applicant.strand);
+                $('#viewCourse1').text(applicant.course_1);
+                $('#viewCourse2').text(applicant.course_2);
+                $('#viewCourse3').text(applicant.course_3);
+                // Show the modal
+                $('#viewApplicantModal').modal('show');
+            } else {
+                alert(response.error || 'Failed to fetch applicant details.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            alert('An error occurred while fetching applicant details.');
+        }
+    });
+});
+
+// Add new applicant
+$(document).on('click', '#addApplicantBtn', function () {
+    const formData = {
+        action: 'add',
+        application_no: $('#addApplicantNo').val(),
+        application_term_id: $('#addApplicationTerm').val(),
+        lastname: $('#addLastname').val(),
+        firstname: $('#addFirstname').val(),
+        middlename: $('#addMiddlename').val(),
+        suffix: $('#addSuffix').val(),
+        strand_id: $('#addStrand').val(),
+        course_1_id: $('#addCourse1').val(),
+        course_2_id: $('#addCourse2').val(),
+        course_3_id: $('#addCourse3').val()
+    }
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'POST',
+        data: formData,
+        success: function (response) {
+            if (response.success) {
+                showNotification('success','Applicant added successfully!');
+                $('#addApplicantModal').modal('hide');
+                $('#applicantTable').DataTable().ajax.reload(null, false); // Reload the DataTable without resetting pagination
+            } else {
+                showNotification('error', response.error ?? 'Failed to add applicant.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            showNotification('error','An error occurred while adding the applicant.');
+        }
+    });
+});
+
+var loadedApplicantData = [];
+// Load Edit applicant data into the modal for editing
+$(document).on('click', '.edit-applicant', function () {
+    const applicantId = $(this).data('id'); // Get the applicant ID from the button's data attribute
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'GET',
+        data: { action: 'view', id: applicantId },
+        dataType: 'json',
+        success: function (response) {
+            if (response.success) {
+                const applicant = response.data;
+                loadedApplicantData = applicant; // Store the loaded applicant data in a global variable
+                // Populate the view modal fields
+                $('#editApplicantId').val(applicant.id);
+                $('#editApplicantNo').val(applicant.applicant_no);
+                $('#editApplicationTerm').val(applicant.application_term_id);
+                $('#editLastname').val(applicant.lastname);
+                $('#editFirstname').val(applicant.firstname);
+                $('#editMiddlename').val(applicant.middlename);
+                $('#editSuffix').val(applicant.suffix)
+                $('#editSex').val(applicant.sex);
+                $('#editStrand').val(applicant.strand_id);
+                $('#editCourse1').val(applicant.course_1_id);
+                $('#editCourse2').val(applicant.course_2_id);
+                $('#editCourse3').val(applicant.course_3_id);
+                // Show the modal
+                $('#editApplicantModal').modal('show');
+            } else {
+                alert(response.error || 'Failed to fetch applicant details.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            alert('An error occurred while fetching applicant details.');
+        }
+    });
+});
+
+$(document).on('click', '#editApplicantBtn', function () {
+    const formData = {
+        action: 'edit',
+        id: $('#editApplicantId').val(),
+        applicant_no: $('#editApplicantNo').val(),
+        application_term_id: $('#editApplicationTerm').val(),
+        lastname: $('#editLastname').val(),
+        firstname: $('#editFirstname').val(),
+        middlename: $('#editMiddlename').val(),
+        suffix: $('#editSuffix').val(),
+        sex: $('#editSex').val(),
+        strand_id: $('#editStrand').val(),
+        course_1_id: $('#editCourse1').val(),
+        course_2_id: $('#editCourse2').val(),
+        course_3_id: $('#editCourse3').val()
+    };
+    const keysToCompare = ['applicant_no', 'application_term_id', 'lastname', 'firstname', 'middlename', 'suffix', 'strand_id', 'course_1_id', 'course_2_id', 'course_3_id'];
+    if(keysToCompare.every(key => formData[key] == loadedApplicantData[key])){
+        showNotification('error','No changes detected!');
+        return;
+    }
+    
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'POST',
+        data: formData,
+        success: function (response) {
+            if (response.success) {
+                showNotification('success','Applicant updated successfully!');
+                $('#editApplicantModal').modal('hide');
+                $('#applicantTable').DataTable().ajax.reload(null, false); // Reload the DataTable without resetting pagination
+            } else {
+                showNotification('error', response.error ?? 'Failed to update applicant.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            showNotification('error','An error occurred while updating the applicant.');
+        }
+    });
+});
+
+$(document).on('change', '#checkAll', function () {
+    $('.applicant-checkbox').prop('checked', this.checked);
+});
+
+$(document).on('change', '.applicant-checkbox', function () {
+    if (!this.checked) {
+      $('#checkAll').prop('checked', false);
+    } else if ($('.applicant-checkbox:checked').length === $('.applicant-checkbox').length) {
+      $('#checkAll').prop('checked', true);
+    }
+});
+
+$(document).on('click', '.delete-applicant', function () {
+    $applicantID = $(this).data('id');
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'GET',
+        data: { action: 'view', id: $applicantID },
+        dataType: 'json',
+        success: function (response) {
+            if (response.success) {
+                const applicant = response.data;
+                $('#singleDeleteApplicantNo').text(applicant.applicant_no);
+                $('#singleDeleteApplicantName').text(`${applicant.lastname}, ${applicant.firstname} ${applicant.middlename}`);
+                $('#singleDeleteApplicantId').val(applicant.id);
+                $('#singleDeleteApplicantModal').modal('show');
             }
         }
-    });
+    })
+});
 
-    // Renew the table when the term changes
-    $('#application_term').change(function() {
-        const selectedTermVal = $(this).val();
-        localStorage.setItem('selectedEnrollmentTerm', selectedTermVal);
-        // Reload the DataTable with the updated application_term
-        table.ajax.reload(null, false); // Reload the data without resetting pagination
-    });
-
-    // Save the selected term to localStorage when it changes
-    $('#application_term').on('change', function() {
-        const selectedTermId = $(this).val();
-        if (selectedTermId) {
-            localStorage.setItem('selectedEnrollmentTerm', selectedTermId);
-        } else {
-            localStorage.removeItem('selectedEnrollmentTerm');
+$(document).on('click', '#singleDeleteApplicantBtn', function () {
+    const applicantId = $('#singleDeleteApplicantId').val();
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'POST',
+        data: { action: 'delete_single', id: applicantId },
+        success: function (response) {
+            if (response.success) {
+                showNotification('success','Applicant deleted successfully!');
+                $('#singleDeleteApplicantModal').modal('hide');
+                $('#applicantTable').DataTable().ajax.reload(null, false); // Reload the DataTable without resetting pagination
+            } else {
+                showNotification('error', response.error ?? 'Failed to delete applicant.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            showNotification('errpr','An error occurred while deleting the applicant.');
         }
     });
-
-
-
-
 });
+
+function unselectEditModalData(id) {
+    const element = $(`.toBeDeleted[data-id="${id}"]`);
+    if (element.length) {
+        element.remove(); // Remove the selected applicant from the modal
+        const selectedIds = $('.toBeDeleted').map(function () {
+            return $(this).data('id');
+        }).get(); // Get all selected IDs
+        $('#multiDeleteApplicantCount').text(selectedIds.length);
+        $('.applicant-checkbox[value="'+ id +'"]').prop('checked', false); // Uncheck the checkbox in the main table
+    }
+}
+
+$(document).on('click', '#multiDeleteApplicantModalBtn', function () {
+    $('#multiDeleteApplicantElements').html('');
+    selectedIds = $('.applicant-checkbox:checked').map(function () {
+        return $(this).val();
+    }).get(); // Get all selected IDs
+
+    if (selectedIds.length === 0) {
+        showNotification('error','Please select at least one applicant to delete.');
+        return;
+    }
+
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'GET',
+        data: { action: 'view_multi', ids: selectedIds },
+        success: function (response) {
+            if (response.success) {
+                const applicants = response.data;
+                let applicantElements = '';
+                applicants.forEach(function (applicant) {
+                    applicantElements += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center toBeDeleted" data-id="${applicant.id}">
+                            <span>${applicant.lastname}, ${applicant.firstname} ${applicant.middlename}</span>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="unselectEditModalData(${applicant.id})">Unselect</button>
+                        </div>
+                    `;
+                });
+                $('#multiDeleteApplicantElements').html(applicantElements);
+                $('#multiDeleteApplicantCount').text(applicants.length);
+                $('#multiDeleteApplicantModal').modal('show');
+            } else {
+                showNotification('error','Could not fetch applicant details.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            showNotification('error','Something went wrong!');
+        }
+    });
+   
+});
+
+$(document).on('click', '#multiDeleteApplicantBtn', function () {
+    const selectedIds = $('.toBeDeleted').map(function () {
+        return $(this).data('id');
+    }).get(); // Get all selected IDs
+
+    if (selectedIds.length === 0) {
+        showNotification('error','Please select at least one applicant to delete.');
+        $('#multiDeleteApplicantModal').modal('hide');
+        return;
+    }
+
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'POST',
+        data: { action: 'delete_multi', ids: selectedIds },
+        success: function (response) {
+            if (response.success) {
+                showNotification('success','Selected applicants deleted successfully!');
+                $('#applicantTable').DataTable().ajax.reload(null, false); // Reload the DataTable without resetting pagination
+            } else {
+                showNotification('error','Failed to delete selected applicants.');
+            }
+        },
+        error: function (xhr) {
+            console.error('AJAX Error:', xhr.responseText);
+            alert('An error occurred while deleting the applicants.');
+        }
+    });
+});
+  
+  

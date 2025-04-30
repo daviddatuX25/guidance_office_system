@@ -1,3 +1,4 @@
+
 // Function to show notification
 function showNotification(status, message) {
     let statusClass; // Declare statusClass
