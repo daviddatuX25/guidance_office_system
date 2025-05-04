@@ -1,5 +1,7 @@
 <?php
 require_once './Main.php';
+require '../vendor/autoload.php';
+use PhpOffice\PhpSpreadsheet\IOFactory;
 header('Content-Type: application/json');
 global $db;
 
@@ -174,8 +176,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'sex' => $_POST['sex'],
                     'strand_id' => $_POST['strand_id'],
                     'course_1_id' => $_POST['course_1_id'],
-                    'course_2_id' => $_POST['course_2_id'],
-                    'course_3_id' => $_POST['course_3_id']
+                    'course_2_id' => $_POST['course_2_id'] ?? null,
+                    'course_3_id' => $_POST['course_3_id'] ?? null
                 ];
                 $result = $db->create('applicants', $data);
                 echo json_encode(['success' => $result !== false, 'data' => $result]);
@@ -255,6 +257,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'import_samples_metadata':
+                $headerRowNumber = intval($_POST['header_row_number']);
+                $file = $_FILES['import_file'];
+                // Load the file and convert it to an array (use PhpSpreadsheet or similar library)
+                try { 
+                    $spreadsheet = IOFactory::load($file['tmp_name']);
+                    $sheet = $spreadsheet->getActiveSheet();
+                    $data = $sheet->toArray();
+                    
+                    // Extract headers from the specified row
+                    $headers = $data[$headerRowNumber - 1] ?? null ; // Adjust for zero-based index
+                    // Check if it is not null
+                    if ($headers === null) {
+                        echo json_encode(['success' => false, 'error' => 'Header row is empty']);
+                        http_response_code(400);
+                        exit;
+                    }
+                    
+                    // Encode headers as { headerData, headerIndex }
+                    $encodedHeaders = [];
+                    foreach ($headers as $index => $header) {
+                        $encodedHeaders[] = [
+                            'headerData' => $header,
+                            'headerIndex' => $index
+                        ];
+                    }
+                    echo json_encode(['success' => true, 'headers' => $encodedHeaders]);
+                } catch (Exception $e) {
+                    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                }
+                break;
             default:
                 echo json_encode(['success' => false, 'error' => 'Invalid action']);
                 http_response_code(400);
