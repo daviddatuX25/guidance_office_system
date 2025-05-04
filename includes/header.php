@@ -18,7 +18,7 @@
 <body>
     <div class="main-wrapper">
         <!-- Notification (Absolute, Top-Right, Small) -->
-        <div id="notification" class="d-none position-absolute top-0 end-0 m-3 p-3 bg-light border rounded shadow-sm" style="z-index: 1050;">
+        <div id="notification" class="d-none position-absolute top-0 end-0 m-3 p-3 bg-light border rounded shadow-sm" style="z-index: 2000;">
             <div class="d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Notification</h6>
                 <button type="button" class="btn-close" id="closeNotification" aria-label="Close"></button>

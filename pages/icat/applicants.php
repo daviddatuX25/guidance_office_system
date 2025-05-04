@@ -157,8 +157,8 @@ $courses = $db->readAll($table = 'courses', $columns = ['id', 'nickname'],[],[],
             <div class="modal-body">
                 <form id="addApplicantForm">
                     <div class="mb-3">
-                        <label for="applicantNo" class="form-label">Applicant no.</label>
-                        <input type="text" class="form-control" id="applicantNo" name="applicant_no" placeholder="Enter applicant number" required>
+                        <label for="addApplicantNo" class="form-label">Applicant no.</label>
+                        <input type="text" class="form-control" id="addApplicantNo" name="applicant_no" placeholder="Enter applicant number" required>
                     </div>
                     <div class="mb-3">
                         <label for="addApplicationTerm" class="form-label">Applicant Term</label>
@@ -370,8 +370,8 @@ $courses = $db->readAll($table = 'courses', $columns = ['id', 'nickname'],[],[],
                 <div class="modal-body">
                     <!-- Application Term Selection -->
                     <div class="mb-3">
-                        <label for="import_application_term_id" class="form-label">Application Term</label>
-                        <select class="form-select" id="import_application_term_id" name="application_term_id" required>
+                        <label for="importApplicationTermId" class="form-label">Application Term</label>
+                        <select class="form-select" id="importApplicationTermId" name="application_term_id" required>
                             <option value="" disabled selected>Select Application Term</option>
                             <?php foreach ($terms as $term): ?>
                                 <option value="<?php echo htmlspecialchars($term['id']); ?>">
@@ -383,19 +383,19 @@ $courses = $db->readAll($table = 'courses', $columns = ['id', 'nickname'],[],[],
 
                     <!-- File Upload -->
                     <div class="mb-3">
-                        <label for="import_file" class="form-label">Upload CSV or Excel File</label>
-                        <input class="form-control" type="file" id="import_file" name="import_file" accept=".csv, .xlsx, .xls" required>
+                        <label for="importFile" class="form-label">Upload CSV or Excel File</label>
+                        <input class="form-control" type="file" id="importFile" name="import_file" accept=".csv, .xlsx, .xls" required>
                     </div>
 
                     <!-- Header and Data Row Specification -->
                     <div class="row">
                         <div class="col-md-6">
-                            <label for="header_row_number" class="form-label">Header Row Number</label>
-                            <input type="number" class="form-control" id="header_row_number" name="header_row_number" value="1" min="1" required>
+                            <label for="importHeaderRowNo" class="form-label">Header Row Number</label>
+                            <input type="number" class="form-control" id="importHeaderRowNo" name="header_row_number" value="1" min="1" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="data_row_start" class="form-label">Data Row Start</label>
-                            <input type="number" class="form-control" id="data_row_start" name="data_row_start" value="2" min="2" required>
+                            <label for="importDataRowStart" class="form-label">Data Row Start</label>
+                            <input type="number" class="form-control" id="importDataRowStart" name="data_row_start" value="2" min="2" required>
                         </div>
                     </div>
 
@@ -406,15 +406,26 @@ $courses = $db->readAll($table = 'courses', $columns = ['id', 'nickname'],[],[],
                     <p class="text-muted small">Map the columns from your file to the expected headers.</p>
                     <div id="headerMappingArea">
                         <?php 
+                        $applicantFields = [
+                            ['fieldName' => 'Applicant No', 'fieldId' => 'importmap_ApplicantNo', 'placeholder' => 'Enter applicant number'],
+                            ['fieldName' => 'Lastname', 'fieldId' => 'importmap_Lastname', 'placeholder' => 'Enter last name'],
+                            ['fieldName' => 'Firstname', 'fieldId' => 'importmap_Firstname', 'placeholder' => 'Enter first name'],
+                            ['fieldName' => 'Middlename', 'fieldId' => 'importmap_Middlename', 'placeholder' => 'Enter middle name'],
+                            ['fieldName' => 'Suffix', 'fieldId' => 'importmap_Suffix', 'placeholder' => 'Enter suffix'],
+                            ['fieldName' => 'Strand Name', 'fieldId' => 'importmap_StrandName', 'placeholder' => 'Enter strand name'],
+                            ['fieldName' => '1st Course Nickname', 'fieldId' => 'importmap_Course1Nickname', 'placeholder' => 'Enter course 1 nickname'],
+                            ['fieldName' => '2nd Course Nickname', 'fieldId' => 'importmap_Course2Nickname', 'placeholder' => 'Enter course 2 nickname'],
+                            ['fieldName' => '3rd Course Nickname', 'fieldId' => 'importmap_Course3Nickname', 'placeholder' => 'Enter course 3 nickname']
+                        ];
                         $expected_headers = [
                             "Applicant No", "Lastname", "Firstname", "Middlename", "Suffix", 
                             "Sex", "Strand Name", "Course 1 Nickname", "Course 2 Nickname", "Course 3 Nickname"
                         ];
-                        foreach ($expected_headers as $header): ?>
+                        foreach ($applicantFields as $field): ?>
                             <div class="mb-2 row">
-                                <label class="col-sm-5 col-form-label col-form-label-sm"><?php echo $header; ?>:</label>
+                                <label class="col-sm-5 col-form-label col-form-label-sm"><?=$field['fieldName'];?>:</label>
                                 <div class="col-sm-7">
-                                    <select class="form-select form-select-sm" name="mapped_headers[<?php echo $header; ?>]">
+                                    <select class="import-metadata form-select form-select-sm" id="<?=$field['fieldId'];?>">
                                         <option value="">None</option>
                                         <!-- Options will be dynamically populated after file upload -->
                                     </select>
@@ -425,24 +436,28 @@ $courses = $db->readAll($table = 'courses', $columns = ['id', 'nickname'],[],[],
 
                     <hr>
 
-                    <!-- Expected Headers and Sample Data Preview -->
                     <h6>Expected Headers and Sample Data Preview</h6>
-                    <!-- ApplicantFields = [
-                            ApplicantNo, Lastname, Firstname, Middlename, Suffix,
-                        ] -->
-                    <?php foreach($samples as $sample)?>
-                        <?php foreach($applicantFields as $field): ?>
+                    <?php $samples = [];?>
+                    <?php foreach ($samples as $sampleIdx => $sample): ?>
+                        <div id="sample<?= $sampleIdx ?>" class="mb-3">
+                        <h6>Draft <?= $sampleIdx + 1 ?></h6>
+                        <?php foreach ($applicantFields as $fieldIdx => $field): ?>
+                            <?php
+                            $fieldName = $field['fieldName'];
+                            $fieldId = $field['fieldId'];
+                            $placeholder = $field['placeholder'];
+                            $value = isset($sample[$fieldName]['data']) ? $sample[$fieldName]['data'] : '';
+                            $error = isset($sample[$fieldName]['error']) ? $sample[$fieldName]['error'] : '';
+                            ?>
                             <div class="mb-3">
-                                <label for="import<?php echo ucfirst($field['id']); ?>" class="form-label">
-                                <?php
-                                    $fieldValue = isset($sample[$field['dbfieldname']] ) ? $sample[$field['dbfieldname']] : ''; 
-                                    if($fieldValue):?>
-                                        <input type="text" class="form-control" id="import<?php echo ucfirst($field['id']); ?>"  placeholder="<?php echo $field['placeholder']?>" required>
-                                    <?php endif;?>
-                                <p class="error"></p>
+                                <label for="<?= $fieldId ?>" class="form-label"><?= $fieldName ?></label>
+                                <input type="text" class="form-control" name="<?= $fieldName ?>" value="<?= htmlspecialchars($value) ?>" placeholder="<?= htmlspecialchars($placeholder) ?>" required>
+                                <?php if ($error): ?>
+                                    <span class="text-danger small"><?= htmlspecialchars($error) ?></span>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
-                    <?php endforeach;?>
+                    <?php endforeach; ?>
                 </div>
 
                 <!-- Modal Footer -->

@@ -122,11 +122,12 @@ $(document).on('click', '.view-applicant', function () {
 $(document).on('click', '#addApplicantBtn', function () {
     const formData = {
         action: 'add',
-        application_no: $('#addApplicantNo').val(),
+        applicant_no: $('#addApplicantNo').val(),
         application_term_id: $('#addApplicationTerm').val(),
         lastname: $('#addLastname').val(),
         firstname: $('#addFirstname').val(),
         middlename: $('#addMiddlename').val(),
+        sex: $('#addSex').val(),
         suffix: $('#addSuffix').val(),
         strand_id: $('#addStrand').val(),
         course_1_id: $('#addCourse1').val(),
@@ -367,6 +368,50 @@ $(document).on('click', '#multiDeleteApplicantBtn', function () {
         error: function (xhr) {
             console.error('AJAX Error:', xhr.responseText);
             alert('An error occurred while deleting the applicants.');
+        }
+    });
+});
+
+// Impor
+$('#importFile, #importHeaderRowNo').on('change', function () {
+    const headerRowNumber = $('#importHeaderRowNo').val();
+    const formData = new FormData();
+    formData.append('action', 'import_samples_metadata');
+    formData.append('header_row_number', headerRowNumber);
+    formData.append('import_file', $('#importFile')[0].files[0]);
+
+     // Clear dropdown options on failure
+     $('.import-metadata.form-select').each(function () {
+        $(this).empty().append('<option value="">None</option>');
+    });
+    
+    // Send AJAX request to fetch headers
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            if (response.success) {
+                // Populate the matching header dropdowns
+                $('.import-metadata.form-select').each(function () {
+                    const select = $(this);
+                    select.empty(); // Clear existing options
+                    select.append('<option value="">None</option>'); // Add default option
+
+                    // Add options from the encoded headers
+                    response.headers.forEach(header => {
+                        select.append(`<option value="${header.headerIndex}">${header.headerData}</option>`);
+                    });
+                });
+                showNotification('success','Headers loaded successfully!');
+            } else {
+                showNotification('error','Failed to load headers. Please check the file and try again.');
+            }
+        },
+        error: function () {
+            showNotification('error','An error occurred while loading headers.');
         }
     });
 });
