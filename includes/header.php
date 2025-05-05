@@ -4,15 +4,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ICAT System</title>
     <!--CSS  -->
-    <link rel="stylesheet" href="./libraries/bootstrap.min.css">
-    <link rel="stylesheet" href="./libraries/DataTables/datatables.min.css"> <!-- DataTables CSS -->
+    <link rel="stylesheet" href="./src/libraries/bootstrap.min.css">
+    <link rel="stylesheet" href="./src/libraries/DataTables/datatables.min.css"> <!-- DataTables CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./src/css/main.css"> <!-- Main CSS -->
 
     <!-- JS -->
-    <script  src="./libraries/bootstrap.bundle.js"></script> <!-- Bootstrap JS Bundle with Popper -->
-    <script src="./libraries/jquery.js"></script> <!-- jQuery library -->
-    <script src="./libraries/DataTables/datatables.min.js"></script> <!-- DataTables JS -->
+    <script  src="./src/libraries/bootstrap.bundle.js"></script> <!-- Bootstrap JS Bundle with Popper -->
+    <script src="./src/libraries/jquery.js"></script> <!-- jQuery library -->
+    <script src="./src/libraries/DataTables/datatables.min.js"></script> <!-- DataTables JS -->
     <script src="./src/js/main.js"></script> <!-- Main script -->
 </head>
 <body>

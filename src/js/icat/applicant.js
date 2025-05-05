@@ -372,7 +372,47 @@ $(document).on('click', '#multiDeleteApplicantBtn', function () {
     });
 });
 
-// Impor
+// Import
+// Load fields
+let applicantFields = [];
+$(document).ready(function () {
+    // load the fields for the import modal
+    // action is load_import_fields
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        type: 'GET',
+        data: { action: 'load_import_fields' },
+        dataType: 'json',
+        success: function (response) {
+            if (response.success) {
+                const fields = response.fields;
+                let fieldHtml = '';
+                fields.forEach(function (field) {
+                    applicantFields.push(field)
+                    fieldHtml += `
+                        <div class="mb-2 row">
+                            <label class="col-sm-5 col-form-label col-form-label-sm">${field.fieldName}:</label>
+                            <div class="col-sm-7">
+                                <select class="import-metadata form-select form-select-sm" id="${field.fieldId}">
+                                    <option value="">None</option>
+                                    <!-- Options will be dynamically populated after file upload -->
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                });
+                $('#importFieldsContainer').html(fieldHtml); // Append the generated HTML to the container
+            } else {
+                showNotification('error','Failed to load import fields.');
+            }
+        },
+        error: function () {
+            showNotification('error','An error occurred while loading import fields.');
+        }
+    });
+});
+
+// Load headers data
 $('#importFile, #importHeaderRowNo').on('change', function () {
     const headerRowNumber = $('#importHeaderRowNo').val();
     const formData = new FormData();
@@ -415,5 +455,94 @@ $('#importFile, #importHeaderRowNo').on('change', function () {
         }
     });
 });
+
+// Display samples data
+let samples = [];
+function displaySample(_samples = [], $sampleIndex) {
+    if (_samples.length !== 0) {
+        samples = _samples; // Store the samples in the global variable
+    }
+    let sampleHtml = '';
+    // use jquery
+    samples.forEach(function (sample, sampleIndex) {
+        sampleHtml += `
+            <div id="sample${sampleIndex}" class="mb-3">
+                <h6>Draft ${sampleIndex + 1}</h6>
+        `;
+        sample.forEach(function (field, fieldIndex) {
+            const fieldName = field.fieldName;
+            const fieldId = field.fieldId;
+            const placeholder = field.placeholder;
+            const value = field.data || '';
+            const error = field.error || '';
+            sampleHtml += `
+                <div class="mb-3">
+                    <label for="${fieldId}" class="form-label">${fieldName}</label>
+                    <input type="text" class="form-control" name="${fieldName}" value="${value}" placeholder="${placeholder}" required>
+                    ${error ? `<span class="text-danger small">${error}</span>` : ''}
+                </div>
+            `;
+        });
+        sampleHtml += `
+                <button type="button" class="btn btn-danger remove-sample" data-index="${sampleIndex}">Remove</button>
+            </div>
+        `;
+    });
+    $('#importSamplesContainer').html(sampleHtml); // Append the generated HTML to the container
+    $('#importSamplesCount').text(samples.length); // Update the count of samples
+}
   
+
+// Load the samples data
+$('#testImportButton').on('click', function() {
+    const formData = new FormData();
+    formData.append('action', 'import_samples');
+    formData.append('import_file', $('#importFile')[0].files[0]);
+    formData.append('data_row_start', parseInt($('#importDataRowStart').val()));
+    // Applicant fields and their value of the selected header
+    applicantFieldsWithValue = [];
+    applicantFields.forEach(function (field) {
+        const selectedHeader = $(`#${field.fieldId}`).val();
+        if (selectedHeader) {
+            applicantFieldsWithValue.push({ fieldName: field.fieldName, fieldId: field.fieldId, headerIndex: selectedHeader });
+        }
+    });
+    formData.append('applicant_fields', JSON.stringify(applicantFieldsWithValue));
+    // Load existing samples from input fieldsif updated jquery
+    if (samples.length !== 0) {
+        let existingSamples = [];
+        samples.forEach(function (sample, sampleIndex) {
+            let sampleData = [];
+            sample.forEach(function (field, fieldIndex) {
+                const fieldName = field.fieldName;
+                const fieldId = field.fieldId;
+                const value = $(`#${fieldId}`).val();
+                sampleData.push({ fieldName, fieldId, value });
+            });
+            existingSamples.push(sampleData);
+        });
+        formData.append('existing_samples', JSON.stringify(existingSamples)); // Append the samples data to the form data
+    }
+    // Send AJAX request to fetch samples
+    $.ajax({
+        url: 'server/icat/applicant_info.php',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+            if (response.success) {
+                displaySample(response.samples, 0); // Display the samples in the modal
+                showNotification('success','Samples loaded successfully!');
+            } else {
+                showNotification('error','Failed to load samples. Please check the file and try again.');
+            }
+        },
+        error: function () {
+            showNotification('error','An error occurred while loading samples.');
+        }
+    });
+
+});
+
   

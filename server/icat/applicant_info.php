@@ -5,6 +5,19 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 header('Content-Type: application/json');
 global $db;
 
+// Pre data
+$applicantFields = [
+    ['fieldName' => 'Applicant No', 'fieldId' => 'import_ApplicantNo', 'placeholder' => 'Enter applicant number'],
+    ['fieldName' => 'Lastname', 'fieldId' => 'import_Lastname', 'placeholder' => 'Enter last name'],
+    ['fieldName' => 'Firstname', 'fieldId' => 'import_Firstname', 'placeholder' => 'Enter first name'],
+    ['fieldName' => 'Middlename', 'fieldId' => 'import_Middlename', 'placeholder' => 'Enter middle name'],
+    ['fieldName' => 'Suffix', 'fieldId' => 'import_Suffix', 'placeholder' => 'Enter suffix'],
+    ['fieldName' => 'Strand Name', 'fieldId' => 'import_StrandName', 'placeholder' => 'Enter strand name'],
+    ['fieldName' => '1st Course Nickname', 'fieldId' => 'import_Course1Nickname', 'placeholder' => 'Enter course 1 nickname'],
+    ['fieldName' => '2nd Course Nickname', 'fieldId' => 'import_Course2Nickname', 'placeholder' => 'Enter course 2 nickname'],
+    ['fieldName' => '3rd Course Nickname', 'fieldId' => 'import_Course3Nickname', 'placeholder' => 'Enter course 3 nickname']
+];
+$notRequiredFields = ['2nd Course Nickname', '3rd Course Nickname', 'Suffix', 'Middlename'];
 // Handle GET requests (e.g., viewing a single applicant)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (isset($_GET['action']) && $_GET['action'] === 'view' && isset($_GET['id'])) {
@@ -81,7 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             http_response_code(404);
         }
         exit;   
-    } else {
+    } 
+    if (isset($_GET['action']) && $_GET['action'] === 'load_import_fields'){
+        $response = [
+            'success' => true,
+            'fields' => $applicantFields
+        ];
+        echo json_encode($response);
+        http_response_code(200);
+        exit;
+    }
+    
+    else {
         echo json_encode(['success' => false, 'error' => 'Invalid action or missing parameters']);
         http_response_code(400);
         exit;   
@@ -226,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(['success' => true]);
                     http_response_code(200);
                 } else {
-                    echo json_encode(['success' => false], ['error' => 'Failed to delete applicant']);
+                    echo json_encode(['success' => false, 'error' => 'Failed to delete applicant']);
                     http_response_code(500);
                 }
                 break;
@@ -252,7 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(['success' => true]);
                     http_response_code(200);
                 } else {
-                    echo json_encode(['success' => false], ['error' => 'Failed to delete applicants']);
+                    echo json_encode(['success' => false, 'error' => 'Failed to delete applicants']);
                     http_response_code(500);
                 }
                 break;
@@ -287,6 +311,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (Exception $e) {
                     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
                 }
+                break;
+            case 'import_samples':
+                // Json decode applicant_fields
+                $applicantFields = json_decode($_POST['applicant_fields']); // [fieldName, fieldId, headerIndex]
+                // Get the data row start
+                $dataRowStart = intval($_POST['data_row_start']);
+                // Validate and process the applicant fields
+                foreach ($applicantFields as $key => $field) {
+                    if (isset($field->headerIndex)) {
+                        $applicantFields[$key]->headerIndex = intval($field->headerIndex); // Convert to integer index
+                    } else {
+                        echo json_encode(['success' => false, 'error' => "Missing header index for field: {$field['fieldName']}"]);
+                        http_response_code(400);
+                        exit;
+                    }
+                }
+                // Samples
+                $samples = [];
+                // Check if post existing_samples exist
+                if (isset($_POST['existing_samples'])) {
+                    $existingSamples = json_decode($_POST['existing_samples']);
+                    foreach ($existingSamples as $key => $sample) {
+                        $samples[$key] = $sample;
+                        foreach ($sample as $fieldIdx => $field){
+                            $samples[$key][$fieldIdx] = $field;
+                            if (empty($field->data) && !in_array($field->fieldName, $notRequiredFields)) {
+                                // See if Courses and Strand are equivalent to existing strands or courses
+                                if (strpos($field->fieldName, 'course') !== false ) {
+                                    $courseNickname = $field->data;
+                                    $course = $db->readOne('courses', ['id'], [['column' => 'nickname', 'operator' => '=', 'value' => $courseNickname]]) ?? null;
+                                    if (empty($course)) {
+                                        $samples[$key][$fieldIdx]->error = "Course does not exists";
+                                    }
+                                } elseif (strpos($field->fieldName, 'strand') !== false) {
+                                    $strandName = $field->data;
+                                    $strand = $db->readOne('strands', ['id'], [['column' => 'name', 'operator' => '=', 'value' => $strandName]]) ?? null;
+                                    if (empty($strand)) {
+                                        $samples[$key][$fieldIdx]->error  = "Strand does not exists";
+                                    }
+                                } else {
+                                    $samples[$key][$fieldIdx]->error  = "Field is required";
+                                }
+                            } else {
+                                $samples[$key][$fieldIdx]->error  = null; // No error for other fields
+                            }                            
+                        }
+                    }
+                } else {
+                    // Get the uploaded file
+                    $file = $_FILES['import_file'];
+                    if (!isset($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
+                        echo json_encode(['success' => false, 'error' => 'Missing or invalid file upload']);
+                        http_response_code(400);
+                        break;
+                    }
+                    
+                   
+                    try {
+                        // Load the spreadsheet
+                        $spreadsheet = IOFactory::load($file['tmp_name']);
+                        $sheet = $spreadsheet->getActiveSheet();
+                        $data = $sheet->toArray();
+
+                        // Extract data rows starting from the specified data row up untl the end
+                        // Adjust for zero-based index
+                        if ($dataRowStart < 1 || $dataRowStart > count($data)) {
+                            echo json_encode(['success' => false, 'error' => 'Invalid data row start']);
+                            http_response_code(400);
+                            break;
+                        }
+                        $dataRows = array_slice($data, $dataRowStart - 1); // Adjust for zero-based index
+
+                        // Process each row
+                        foreach ($dataRows as $rowIndex => $row) {
+                            foreach ($applicantFields as $fieldIndex => $field) {
+                                $headerIndex = $field->headerIndex;
+                                // Check if the column-data exists in the current row
+                                $samples[$rowIndex][$fieldIndex]['fieldName'] = $field->fieldName;
+                                $samples[$rowIndex][$fieldIndex]['fieldId'] = $field->fieldId . '_' . $rowIndex; // Unique field ID for each row
+                                if (isset($row[$headerIndex])) {
+                                    $samples[$rowIndex][$fieldIndex]['data'] = trim($row[$headerIndex]); // Trim whitespace
+                                } else {
+                                    $samples[$rowIndex][$fieldIndex]['data'] = '';
+                                }
+                                // Check if Courses and Strand are equivalent to existing strands or courses
+                                if (empty($samples[$rowIndex][$fieldIndex]['data']) && !in_array($field->fieldName, $notRequiredFields)) {
+                                    if (strpos($field->fieldName, 'course') !== false) {
+                                        $courseNickname = $samples[$rowIndex][$fieldIndex]['data'];
+                                        $course = $db->readOne('courses', ['id'], [['column' => 'nickname', 'operator' => '=', 'value' => $courseNickname]]) ?? null;
+                                        if (empty($course)) {
+                                            $samples[$rowIndex][$fieldIndex]['error'] = "Invalid course nickname";
+                                        }
+                                    } elseif (strpos($field->fieldName, 'strand') !== false) {
+                                        $strandName = $samples[$rowIndex][$fieldIndex]['data'];
+                                        $strand = $db->readOne('strands', ['id'], [['column' => 'name', 'operator' => '=', 'value' => $strandName]]) ?? null;
+                                        if (empty($strand)) {
+                                            $samples[$rowIndex][$fieldIndex]['error'] = "Strand does not exists";
+                                        }
+                                    } else {
+                                        $samples[$rowIndex][$fieldIndex]['error'] = "Field is required";
+                                    }
+
+                                } else {
+                                    $samples[$rowIndex][$fieldIndex]['error'] = null; // No error for other fields
+                                }
+                            }
+                        }
+                    } catch (Exception $e) {
+                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        http_response_code(500);
+                    }
+                }
+                echo json_encode(['success' => true, 'samples' => $samples]);
                 break;
             default:
                 echo json_encode(['success' => false, 'error' => 'Invalid action']);
