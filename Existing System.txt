@@ -1,0 +1,2316 @@
+root//
+icat.php--
+root//
+icat.php--
+
+index.php--
+logout.php--
+
+---
+pages\icat directory(most like frontend and no js for ajax here..)
+
+pages\icat\ applicants.php--
+<?php
+$terms = $db->readAll($table = 'application_term', $columns = ['id', 'academic_year', 'semester'],[],[],null);
+$strands = $db->readAll($table = 'strands', $columns = ['id', 'name'],[],[],null);
+$courses = $db->readAll($table = 'courses', $columns = ['id', 'nickname'],[],[],null);
+?>
+<div class="container-fluid mt-4">
+  <div class="mb-3">
+      <label for="application_term" class="form-label">Enrollment Term: </label>
+      <select class="form-select" id="application_term" name="application_term">
+        <option value="">All terms...</option>
+        <?php foreach ($terms as $term): ?>
+          <option value="<?php echo htmlspecialchars($term['id']); ?>">
+            <?php echo htmlspecialchars($term['academic_year'] . ' - ' . $term['semester']); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <small id="helpId" class="form-text text-muted">Select the academic term for enrollment.</small>
+    </div>
+  <div class="table-responsive w-80 mb-5">
+      <table class="table table-striped table-hover" id="applicantTable">
+          <thead>
+              <tr>
+                  <td><input id="checkAll" type="checkbox"></td>
+                  <td>Applicant no.</td>
+                  <td>Last Name</td>
+                  <td>First Name</td>
+                  <td>Middle Name</td>
+                  <td>Sex</td>
+                  <td>Strand</td>
+                  <td>Preferred Course</td>
+                  <td>Test Status</td>
+                  <td></td>
+              </tr>
+          </thead>
+          <tbody>
+          </tbody>
+      </table>
+    </div>
+    <button type="button" class="d-block d-md-none btn position-fixed bottom-0 end-0" data-bs-toggle="offcanvas" data-bs-target="#applicantButtons" style="z-index: 1050;">
+        <i class="fas fa-chevron-up  fs-4"></i>
+    </button>
+
+    <div class="offcanvas offcanvas-bottom" data-bs-backdrop="false" id="applicantButtons">
+      <div class="offcanvas-header">
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+        <div class="offcanvas-body">
+          <div class="row mb-3 gy-1 gy-md-2 p-1 bg-white justify-content-center align-items-center">
+            <button type="button" class="btn col-4 col-lg-2 col-md-3 col-sm-4 btn-primary mx-1" data-bs-toggle="modal" data-bs-target="#addApplicantModal">
+                <i class="fas fa-plus me-1"></i>Add
+            </button>
+            <button type="button" class="btn col-4 col-lg-2 col-md-3 btn-danger mx-1" data-bs-toggle="modal" data-bs-target="#multiDeleteApplicantModal">
+                <i class="fas fa-trash me-1"></i>Delete
+            </button>
+            <button type="button" class="btn col-4 col-lg-2 col-md-3 btn-primary mx-1" data-bs-toggle="modal" data-bs-target="#printModal">
+                <i class="fas fa-print me-1"></i>Print
+            </button>
+            <button type="button" class="btn col-4 col-lg-2 col-md-3 btn-primary mx-1" data-bs-toggle="modal" data-bs-target="#importApplicantsModal">
+                <i class="fas fa-file-import me-1"></i>Import
+            </button>
+          </div>
+       </div>
+    </div>
+  <!-- For Medium Screen Buttons -->
+  <div class="d-none d-md-block row mb-3 gy-1 gy-md-2 position-sticky bottom-0 p-1 bg-white justify-content-center" style="z-index: 100;">
+    <button type="button" class="btn col-4 col-lg-2 col-md-3 col-sm-4 btn-primary mx-1" data-bs-toggle="modal" data-bs-target="#addApplicantModal">
+        <i class="fas fa-plus me-1"></i>Add
+    </button>
+    <button type="button" class="btn col-4 col-lg-2 col-md-3 btn-danger mx-1" id="multiDeleteApplicantModalBtn">
+        <i class="fas fa-trash me-1"></i>Delete
+    </button>
+    <button type="button" class="btn col-4 col-lg-2 col-md-3 btn-primary mx-1" data-bs-toggle="modal" data-bs-target="#printModal">
+        <i class="fas fa-print me-1"></i>Print
+    </button>
+    <button type="button" class="btn col-4 col-lg-2 col-md-3 btn-primary mx-1" data-bs-toggle="modal" data-bs-target="#importApplicantsModal">
+        <i class="fas fa-file-import me-1"></i>Import
+    </button>
+  </div>
+</div>
+
+
+<!-- View Applicant Modal -->
+<div class="modal fade" id="viewApplicantModal" tabindex="-1" aria-labelledby="viewApplicantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewApplicantModalLabel">View Applicant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Applicant no.</label>
+                    <p class="form-control-plaintext text-primary" id="viewApplicantNo"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Application Term</label>
+                    <p class="form-control-plaintext text-primary" id="viewApplicationTerm"></p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Lastname</label>
+                            <p class="form-control-plaintext text-primary " id="viewLastname"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Firstname</label>
+                            <p class="form-control-plaintext text-primary" id="viewFirstname"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Middle name</label>
+                            <p class="form-control-plaintext text-primary" id="viewMiddlename"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Suffix</label>
+                            <p class="form-control-plaintext text-primary" id="viewSuffix"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sex</label>
+                            <p class="form-control-plaintext text-primary" id="viewSex"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Strand</label>
+                            <p class="form-control-plaintext text-primary" id="viewStrand"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">1st Preferred Course</label>
+                            <p class="form-control-plaintext text-primary" id="viewCourse1"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">2nd Preferred Course</label>
+                            <p class="form-control-plaintext text-primary" id="viewCourse2"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">3rd Preferred Course</label>
+                            <p class="form-control-plaintext text-primary" id="viewCourse3"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Applicant Modal -->
+<div class="modal fade" id="addApplicantModal" tabindex="-1" aria-labelledby="applicantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="applicantModalLabel">Add Applicant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addApplicantForm">
+                    <div class="mb-3">
+                        <label for="addApplicantNo" class="form-label">Applicant no.</label>
+                        <input type="text" class="form-control" id="addApplicantNo" name="applicant_no" placeholder="Enter applicant number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="addApplicationTerm" class="form-label">Applicant Term</label>
+                        <select class="form-select" id="addApplicationTerm" name="applicant_term_id" required>
+                            <?php foreach ($terms as $term): ?>
+                                <option value="<?php echo htmlspecialchars($term['id']); ?>">
+                                    <?php echo htmlspecialchars($term['academic_year'] . ' - ' . $term['semester']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addLastname" class="form-label">Lastname</label>
+                                <input type="text" class="form-control" id="addLastname" name="lastname" placeholder="Enter last name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="addFirstname" class="form-label">Firstname</label>
+                                <input type="text" class="form-control" id="addFirstname" name="firstname" placeholder="Enter first name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="addMiddlename" class="form-label">Middle name</label>
+                                <input type="text" class="form-control" id="addMiddlename" name="middlename" placeholder="Enter middle name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="addSuffix" class="form-label">Suffix</label>
+                                <input type="text" class="form-control" id="addSuffix" name="suffix" placeholder="Enter suffix">
+                            </div>
+                            <div class="mb-3">
+                                <label for="addSex" class="form-label">Sex</label>
+                                <select class="form-select" id="addSex" name="sex" required>
+                                    <option value="" disabled selected>Choose...</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="addStrand" class="form-label">Strand</label>
+                                <select class="form-select" id="addStrand" name="strand_id" required>
+                                    <option value="" disabled selected>Choose...</option>
+                                    <?php foreach ($strands as $strand): ?>
+                                        <option value="<?php echo $strand['id']; ?>"><?php echo htmlspecialchars($strand['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php for ($i = 1; $i <= 3; $i++): ?>
+                          <div class="mb-3">
+                              <label for="addCourse<?php echo $i; ?>" class="form-label"><?php echo $i . ($i === 1 ? 'st' : ($i === 2 ? 'nd' : 'rd')); ?> Preferred Course</label>
+                              <select class="form-select" id="addCourse<?php echo $i; ?>" name="course_<?php echo $i; ?>_id" required>
+                                <option value="" disabled selected>Choose...</option>
+                                  <?php foreach ($courses as $course): ?>
+                                      <option value="<?php echo $course['id']; ?>"><?php echo htmlspecialchars($course['nickname']); ?></option>
+                                  <?php endforeach; ?>
+                              </select>
+                          </div>
+                          <?php endfor; ?>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" >Add w/ Exam Result</button>
+                <button type="button" class="btn btn-primary" id="addApplicantBtn" >Add Applicant</button> 
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Applicant Modal -->
+<div class="modal fade" id="editApplicantModal" tabindex="-1" aria-labelledby="editApplicantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editApplicantModalLabel">Edit Applicant</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editApplicantForm">
+                    <input type="hidden" id="editApplicantId" name="applicant_id">
+                    <div class="mb-3">
+                        <label for="editApplicantNo" class="form-label">Applicant no.</label>
+                        <input type="text" class="form-control" id="editApplicantNo" name="applicant_no" placeholder="Enter applicant number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editApplicationTerm" class="form-label">Applicant Term</label>
+                        <select class="form-select" id="editApplicationTerm" name="applicant_term_id" required>
+                            <?php foreach ($terms as $term): ?>
+                                <option value="<?php echo htmlspecialchars($term['id']); ?>">
+                                    <?php echo htmlspecialchars($term['academic_year'] . ' - ' . $term['semester']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editLastname" class="form-label">Lastname</label>
+                                <input type="text" class="form-control" id="editLastname" name="lastname" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editFirstname" class="form-label">Firstname</label>
+                                <input type="text" class="form-control" id="editFirstname" name="firstname" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editMiddlename" class="form-label">Middle name</label>
+                                <input type="text" class="form-control" id="editMiddlename" name="middlename">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editSuffix" class="form-label">Suffix</label>
+                                <input type="text" class="form-control" id="editSuffix" name="suffix">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editSex" class="form-label">Sex</label>
+                                <select class="form-select" id="editSex" name="sex" required>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editStrand" class="form-label">Strand</label>
+                                <select class="form-select" id="editStrand" name="strand_id" required>
+                                    <?php foreach ($strands as $strand): ?>
+                                        <option value="<?php echo $strand['id']; ?>"><?php echo htmlspecialchars($strand['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php for ($i = 1; $i <= 3; $i++): ?>
+                            <div class="mb-3">
+                            <label for="editCourse<?php echo $i; ?>" class="form-label"><?php echo $i . ($i === 1 ? 'st' : ($i === 2 ? 'nd' : 'rd')); ?> Preferred Course</label>
+                            <select class="form-select" id="editCourse<?php echo $i; ?>" name="course_<?php echo $i; ?>_id" required>
+                                <?php foreach ($courses as $course): ?>
+                                    <option value="<?php echo $course['id']; ?>"><?php echo htmlspecialchars($course['nickname']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="editApplicantBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Single Delete Modal -->
+<div class="modal fade" id="singleDeleteApplicantModal" tabindex="-1" aria-labelledby="singleDeleteApplicantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="singleDeleteApplicantModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete: </p>
+                <input type="hidden" name="applicant_id" id="singleDeleteApplicantId" value="">
+                <p><strong>Applicant name:</strong> <span class="text-danger" id="singleDeleteApplicantName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="singleDeleteApplicantBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Multi Delete Modal -->
+<div class="modal fade" id="multiDeleteApplicantModal" tabindex="-1" aria-labelledby="multiDeleteApplicantModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="multiDeleteApplicantModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete (<span style="font-weight:bolder" id="multiDeleteApplicantCount"></span> record/s) </p>
+                <div class="list-group" id="multiDeleteApplicantElements">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="multiDeleteApplicantBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Import Records Modal -->
+<div class="modal fade" id="importApplicantsModal" tabindex="-1" aria-labelledby="importApplicantsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importApplicantsModalLabel">Import Applicants</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Application Term Selection -->
+                <div class="mb-3">
+                    <label for="importApplicationTermId" class="form-label">Application Term</label>
+                    <select class="form-select" id="importApplicationTermId" name="application_term_id" required>
+                        <option value="" disabled selected>Select Application Term</option>
+                        <?php foreach ($terms as $term): ?>
+                            <option value="<?php echo htmlspecialchars($term['id']); ?>">
+                                <?php echo htmlspecialchars($term['academic_year'] . ' - ' . $term['semester']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- File Upload -->
+                <div class="mb-3">
+                    <label for="importFile" class="form-label">Upload CSV or Excel File</label>
+                    <input class="form-control" type="file" id="importFile" name="import_file" accept=".csv, .xlsx, .xls" required>
+                </div>
+
+                <!-- Header and Data Row Specification -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="importHeaderRowNo" class="form-label">Header Row Number</label>
+                        <input type="number" class="form-control" id="importHeaderRowNo" name="header_row_number" value="1" min="1" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="importDataRowStart" class="form-label">Data Row Start</label>
+                        <input type="number" class="form-control" id="importDataRowStart" name="data_row_start" value="2" min="2" required>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Matching Headers Section -->
+                <h6>Matching Headers</h6>
+                <p class="text-muted small">Map the columns from your file to the expected headers.</p>
+                <div id="importFieldsContainer">
+                </div>
+
+                <hr>
+
+                <h6>Expected Headers and Sample Data Preview</h6>
+                <p class="text-muted small">Sample count: <span id="importSamplesCount"></span> </p>
+                <div id="importSamplesContainer">
+
+                </div>
+                <div class="d-flex justify-content-around align-items-center mb-3">
+                    <button type="button" class="btn btn-secondary" id="prevSampleBtn" disabled>Previous</button>
+                    <button type="button" class="btn btn-secondary" id="nextSampleBtn">Next</button>
+                </div>
+            </div>
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="testImportButton">Test</button>
+                <button type="submit" class="btn btn-success" id="importButton" disabled>Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Modal -->
+<div class="modal fade" id="printModal" tabindex="-1" aria-labelledby="printModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="printOptionsForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="printModalLabel">Print Options</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="printReportType" class="form-label">Report Type</label>
+                        <select class="form-select" id="printReportType" name="report_type">
+                            <option value="summary" selected>Summary</option>
+                            <option value="ranges">Ranges</option>
+                            <option value="template">Template</option>
+                        </select>
+                    </div>
+                    <div id="printPreviewArea" class="border p-2" style="min-height: 100px;">
+                        <p class="text-muted text-center">Print Content Area / Preview</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="executePrint()">Print</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- <script>
+function viewApplication(id) {
+  console.log("View application with ID:", id);
+}
+
+function editApplication(id) {
+  console.log("Edit application with ID:", id);
+}
+
+function deleteApplication(id) {
+  console.log("Delete application with ID:", id);
+}
+
+function submitAddApplicant() {
+  // Placeholder for AJAX submission
+  console.log('Add applicant submitted');
+}
+
+function submitEditApplicant() {
+    // Placeholder for AJAX submission
+    console.log('Edit applicant submitted');
+}
+
+function submitAddExamResult() {
+    // Placeholder for AJAX submission
+    console.log('Add exam result submitted');
+}
+
+function submitDeleteApplicant() {
+    // Placeholder for AJAX submission
+    console.log('Delete applicant submitted');
+}
+
+function executePrint() {
+    console.log('Print executed');
+}
+</script> -->
+pages\icat\ exam_results.php--
+    <div class="container mt-4">
+        <h2>Exam Results Management</h2>
+        <button type="button" class="btn btn-info mb-2" data-bs-toggle="modal" data-bs-target="#viewExamResultModal">
+            View Exam Result
+        </button>
+        <button type="button" class="btn btn-warning mb-2" data-bs-toggle="modal" data-bs-target="#editExamResultModal">
+            Edit Exam Result
+        </button>
+        <button type="button" class="btn btn-success mb-2" data-bs-toggle="modal" data-bs-target="#addExamResultsModal">
+            Add Exam Result
+        </button>
+        <button type="button" class="btn btn-secondary mb-2" data-bs-toggle="modal" data-bs-target="#importExamResultsModal">
+            Import Records
+        </button>
+        <button type="button" class="btn btn-light mb-2 border" data-bs-toggle="modal" data-bs-target="#printModal">
+            Print
+        </button>
+        <button type="button" class="btn btn-danger mb-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            Delete Record
+        </button>
+    </div>
+
+    <!-- View Exam Result Modal -->
+    <div class="modal fade" id="viewExamResultModal" tabindex="-1" aria-labelledby="viewExamResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewExamResultModalLabel">View Exam Result Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Applicant No:</strong> <span id="viewApplicantNo"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Name:</strong> <span id="viewApplicantName"></span>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Scores:</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">General Ability</label>
+                            <input type="number" class="form-control" id="viewGeneralAbility" readonly>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Verbal Aptitude</label>
+                            <input type="number" class="form-control" id="viewVerbalAptitude" readonly>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Numerical Aptitude</label>
+                            <input type="number" class="form-control" id="viewNumericalAptitude" readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Spatial Aptitude</label>
+                            <input type="number" class="form-control" id="viewSpatialAptitude" readonly>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Perceptual Aptitude</label>
+                            <input type="number" class="form-control" id="viewPerceptualAptitude" readonly>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Manual Dexterity</label>
+                            <input type="number" class="form-control" id="viewManualDexterity" readonly>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">Date Taken</label>
+                            <input type="date" class="form-control" id="viewDateTaken" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Exam Result Modal -->
+    <div class="modal fade" id="editExamResultModal" tabindex="-1" aria-labelledby="editExamResultModalLabel" aria-hidden "true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="editExamResultForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editExamResultModalLabel">Edit Exam Result</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editRecordId" name="record_id">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Applicant No:</strong> <span id="editApplicantNoDisplay"></span>
+                                <input type="hidden" id="editApplicantNo" name="applicant_no">
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Name:</strong> <span id="editApplicantNameDisplay"></span>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6>Scores:</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <label for="editGeneralAbility" class="form-label">General Ability</label>
+                                <input type="number" class="form-control" id="editGeneralAbility" name="general_ability" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="editVerbalAptitude" class="form-label">Verbal Aptitude</label>
+                                <input type="number" class="form-control" id="editVerbalAptitude" name="verbal_aptitude" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="editNumericalAptitude" class="form-label">Numerical Aptitude</label>
+                                <input type="number" class="form-control" id="editNumericalAptitude" name="numerical_aptitude" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <label for="editSpatialAptitude" class="form-label">Spatial Aptitude</label>
+                                <input type="number" class="form-control" id="editSpatialAptitude" name="spatial_aptitude" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="editPerceptualAptitude" class="form-label">Perceptual Aptitude</label>
+                                <input type="number" class="form-control" id="editPerceptualAptitude" name="perceptual_aptitude" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="editManualDexterity" class="form-label">Manual Dexterity</label>
+                                <input type="number" class="form-control" id="editManualDexterity" name="manual_dexterity" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-2">
+                                <label for="editDateTaken" class="form-label">Date Taken</label>
+                                <input type="date" class="form-control" id="editDateTaken" name="date_taken" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Exam Result Modal -->
+    <div class="modal fade" id="addExamResultsModal" tabindex="-1" aria-labelledby="addExamResultModalLabel" aria-hidden="true">
+        <div class="class modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="addExamResultForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addExamResultModalLabel">Add Exam Result</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="addApplicantNo" class="form-label">Applicant No</label>
+                                <input type="text" class="form-control" id="addApplicantNo" name="applicant_no" required placeholder="Enter Applicant No">
+                            </div>
+                        </div>
+                        <hr>
+                        <h6>Scores:</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <label for="addGeneralAbility" class="form-label">General Ability</label>
+                                <input type="number" class="form-control" id="addGeneralAbility" name="general_ability" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="addVerbalAptitude" class="form-label">Verbal Aptitude</label>
+                                <input type="number" class="form-control" id="addVerbalAptitude" name="verbal_aptitude" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="addNumericalAptitude" class="form-label">Numerical Aptitude</label>
+                                <input type="number" class="form-control" id="addNumericalAptitude" name="numerical_aptitude" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <label for="addSpatialAptitude" class="form-label">Spatial Aptitude</label>
+                                <input type="number" class="form-control" id="addSpatialAptitude" name="spatial_aptitude" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="addPerceptualAptitude" class="form-label">Perceptual Aptitude</label>
+                                <input type="number" class="form-control" id="addPerceptualAptitude" name="perceptual_aptitude" required>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="addManualDexterity" class="form-label">Manual Dexterity</label>
+                                <input type="number" class="form-control" id="addManualDexterity" name="manual_dexterity" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-2">
+                                <label for="addDateTaken" class="form-label">Date Taken</label>
+                                <input type="date" class="form-control" id="addDateTaken" name="date_taken" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div fellas="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Add Exam Result</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Import Records Modal (updated field names) -->
+    <div class="modal fade" id="importExamResultsModal" tabindex="-1" aria-labelledby="importExamResultsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="importRecordsForm" enctype="multipart/form-data">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="importExamResultsModalLabel">Import Records from File</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="csvFile" class="form-label">Upload CSV or Excel File</label>
+                            <input class="form-control" type="file" id="csvFile" name="import_file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Expected Headers</h6>
+                                <ul class="list-group">
+                                    <li class="list-group-item">Applicant No</li>
+                                    <li class="list-group-item">General Ability</li>
+                                    <li class="list-group-item">Verbal Aptitude</li>
+                                    <li class="list-group-item">Numerical Aptitude</li>
+                                    <li class="list-group-item">Spatial Aptitude</li>
+                                    <li class="list-group-item">Perceptual Aptitude</li>
+                                    <li class="list-group-item">Manual Dexterity</li>
+                                    <li class="list-group-item">Date Taken</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Matching File Headers</h6>
+                                <p class="text-muted small">Map the columns from your file to the expected headers.</p>
+                                <div id="headerMappingArea">
+                                    <div class="mb-2 row">
+                                        <label class="col-sm-5 col-form-label col-form-label-sm">Applicant No:</label>
+                                        <div class="col-sm-7">
+                                            <select class="form-select form-select-sm" name="map_applicant_no">
+                                                <option>Column A</option><option>Column B</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2 row">
+                                        <label class="col-sm-5 col-form-label col-form-label-sm">General Ability:</label>
+                                        <div class="col-sm-7">
+                                            <select class="form-select form-select-sm" name="map_general_ability">
+                                                <option>Column A</option><option>Column B</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <!-- Add similar mappings for other fields -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Import</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal (unchanged) -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="deleteRecordForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="deleteRecordIdInput" name="record_id">
+                        Are you sure you want to delete this record? This action cannot be undone.
+                        <div id="recordToDeleteDetails" class="mt-2 text-muted small"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Proceed</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Modal (unchanged) -->
+    <div class="modal fade" id="printModal" tabindex="-1" aria-labelledby="printModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="printOptionsForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="printModalLabel">Print Options</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="printReportType" class="form-label">Report Type</label>
+                            <select class="form-select" id="printReportType" name="report_type">
+                                <option value="summary" selected>Summary</option>
+                                <option value="ranges">Ranges</option>
+                                <option value="template">Template</option>
+                            </select>
+                        </div>
+                        <div id="printPreviewArea" class="border p-2" style="min-height: 100px;">
+                            <p class="text-muted text-center">Print Content Area / Preview</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="executePrintButton">Print</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        // Example: Setting data for the Edit Modal before showing it
+        const editExamResultModal = document.getElementById('editExamResultModal');
+        editExamResultModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            const recordId = button.getAttribute('data-bs-record-id');
+            const applicantNo = button.getAttribute('data-bs-applicant-no');
+            const applicantName = button.getAttribute('data-bs-applicant-name');
+            const modalTitle = editExamResultModal.querySelector('.modal-title');
+            const applicantNoDisplay = editExamResultModal.querySelector('#editApplicantNoDisplay');
+            const applicantNameDisplay = editExamResultModal.querySelector('#editApplicantNameDisplay');
+            const recordIdInput = editExamResultModal.querySelector('#editRecordId');
+            const applicantNoInput = editExamResultModal.querySelector('#editApplicantNo');
+
+            modalTitle.textContent = `Edit Exam Result for ${applicantName}`;
+            applicantNoDisplay.textContent = applicantNo;
+            applicantNameDisplay.textContent = applicantName;
+            recordIdInput.value = recordId;
+            applicantNoInput.value = applicantNo;
+        });
+
+        const deleteModal = document.getElementById('deleteModal');
+        deleteModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            const recordId = button.getAttribute('data-bs-record-id');
+            const recordInfo = button.getAttribute('data-bs-record-info') || 'this item';
+            const recordIdInput = deleteModal.querySelector('#deleteRecordIdInput');
+            const recordDetailsArea = deleteModal.querySelector('#recordToDeleteDetails');
+            recordIdInput.value = recordId;
+            recordDetailsArea.textContent = `Details: ${recordInfo} (ID: ${recordId})`;
+        });
+    </script>
+---
+includes\header.php--
+<!DOCTYPE html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICAT System</title>
+    <!--CSS  -->
+    <link rel="stylesheet" href="./src/libraries/bootstrap.min.css">
+    <link rel="stylesheet" href="./src/libraries/DataTables/datatables.min.css"> <!-- DataTables CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./src/css/main.css"> <!-- Main CSS -->
+
+    <!-- JS -->
+    <script  src="./src/libraries/bootstrap.bundle.js"></script> <!-- Bootstrap JS Bundle with Popper -->
+    <script src="./src/libraries/jquery.js"></script> <!-- jQuery library -->
+    <script src="./src/libraries/DataTables/datatables.min.js"></script> <!-- DataTables JS -->
+    <script src="./src/js/main.js"></script> <!-- Main script -->
+</head>
+<body>
+    <div class="main-wrapper">
+        <!-- Notification (Absolute, Top-Right, Small) -->
+        <div id="notification" class="d-none position-fixed top-0 end-0 m-3 p-3 bg-light border rounded shadow-sm" style="z-index: 2000;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Notification</h6>
+                <button type="button" class="btn-close" id="closeNotification" aria-label="Close"></button>
+            </div>
+            <div class="mt-2">
+                <p id="notifMessage">This is a notification message.</p>
+            </div>
+        </div>
+        <?php
+        if (isset($_SESSION['loginMessage'])) {
+            echo '<script>showNotification("success"," '. $_SESSION['loginMessage'] . '  ");</script>';
+            unset($_SESSION['loginMessage']);
+        }
+        ?>
+
+includes\footer.php--
+        <p class="text-center p-1"> &copy; <?=date('Y')?> ICAT Website. All rights reserved. </p>
+    </div>
+
+    <script>
+        // Function to show notification
+        function showNotification(status, message) {
+            let statusClass; // Declare statusClass
+            const $notification = $('#notification');
+            const $notifMessage = $('#notifMessage');
+
+            // Set status class based on type
+            switch(status) {
+                case "success":
+                    statusClass = "bg-success text-white";
+                    break;
+                case "error":
+                    statusClass = "bg-danger text-white";
+                    break;
+                case "warning":
+                    statusClass = "bg-warning text-dark";
+                    break;
+                default:
+                    statusClass = "bg-light text-dark";
+            }
+
+            $notification
+                .removeClass('d-none bg-light bg-success bg-danger bg-warning text-white text-dark')
+                .addClass('d-block ' + statusClass);
+            $notifMessage.text(message);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(function() {
+                $notification
+                    .removeClass('d-block ' + statusClass)
+                    .addClass('d-none bg-light text-dark');
+            }, 5000); // 5000ms = 5 seconds
+        }
+
+        // Close button functionality
+        $('#closeNotification').on('click', function() {
+            $('#notification').removeClass('d-block').addClass('d-none');
+        });
+
+        $(document).ready(function() {
+            $('#logout-button').click(function() {
+                $.ajax({
+                    url: 'logout.php',
+                    success: ()=>{
+                        window.location.href = 'index.php';
+                    }
+                });
+            });
+
+            // // Check if a nav item is saved in localStorage
+            // const lastTab = localStorage.getItem('lastTab');
+            // if (lastTab) {
+            //     // Activate the saved tab
+            //     $(`#${lastTab}-tab`).addClass('active');
+            //     $(`#${lastTab}`).addClass('show active');
+            //     $('.tab-pane').not(`#${lastTab}`).removeClass('show active');
+            //     $('.nav-link').not(`#${lastTab}-tab`).removeClass('active');
+            // }
+
+            // // Save the selected nav item to localStorage on click
+            // $('.nav-link').on('click', function () {
+            //     const tabId = $(this).attr('id').replace('-tab', '');
+            //     localStorage.setItem('lastTab', tabId);
+            // });
+            
+            
+        });
+    </script>
+
+
+</body>
+</html>
+
+includes\icat_sidebar.php--
+-<!-- Off-Canvas for Small Screens, Sidebar for Medium and Up -->
+<div class="offcanvas offcanvas-start bg-light" data-bs-backdrop="false" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel" style="width: 250px;">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close">
+        </button>
+    </div>
+    <div class="offcanvas-body p-3">
+        <ul class="nav nav-pills flex-column mb-auto" id="sidebarNav" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="dashboard-tab" data-bs-toggle="pill" href="#dashboard" role="tab" aria-controls="dashboard" aria-selected="true">
+                    <i class="fas fa-chart-line me-2"></i><span class="nav-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="applicants-tab" data-bs-toggle="pill" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">
+                    <i class="fa-solid fa-user-tie me-2"></i><span class="nav-text">Applicants</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="examResults-tab" data-bs-toggle="pill" href="#examResults" role="tab" aria-controls="examResults" aria-selected="false">
+                    <i class="fa-solid fa-newspaper me-2"></i><span class="nav-text">Exam Results</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="settings-tab"  data-bs-toggle="pill" href="#settings" role="tab" aria-controls="settings" aria-selected="false">
+                    <i class="fas fa-cog me-2"></i><span class="nav-text">Settings</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Sidebar for Medium and Larger Screens -->
+<div class="collapse bg-light h-100 d-none d-md-block" id="desktopSidebar" style="min-width: 150px; width: 18%;">
+    <div class="d-flex flex-column flex-shrink-0 p-3 bg-light h-100">
+        <ul class="nav nav-pills flex-column mb-auto" id="sidebarNavDesktop" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active d-flex align-items-center" id="dashboard-tab-desktop" data-bs-toggle="pill" href="#dashboard" role="tab" aria-controls="dashboard" aria-selected="true">
+                    <i class="fas fa-chart-line me-md-2"></i><span class="nav-text d-none d-md-inline">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center" id="applicants-tab-desktop" data-bs-toggle="pill" href="#applicants" role="tab" aria-controls="applicants" aria-selected="false">
+                    <i class="fa-solid fa-user-tie me-md-2"></i><span class="nav-text d-none d-md-inline">Applicants</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center" id="examResults-tab-desktop" data-bs-toggle="pill" href="#examResults" role="tab" aria-controls="examResults" aria-selected="false">
+                    <i class="fa-solid fa-newspaper me-md-2"></i><span class="nav-text d-none d-md-inline">Exam Results</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center" id="settings-tab-desktop" data-bs-toggle="pill" href="#settings" role="tab" aria-controls="settings" aria-selected="false">
+                    <i class="fas fa-cog me-md-2"></i><span class="nav-text d-none d-md-inline">Settings</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+includes\loginForm.php--
+-
+<!-- Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Login</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form action="login.php">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+
+            <p id="loginErr"class="text-danger" style="display: none"> Username and password do not match.</p>
+            <button type="submit" id="submit-login"class="btn btn-primary">Login</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>
+
+
+includes\navbar.php--
+<nav class="navbar navbar-expand navbar-light bg-light sticky-top">
+    <div class="w-50 d-block d-md-none">
+        <button class=" btn btn-primary m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    <div class="container justify-content-center">
+        <div class="nav navbar-nav">
+            <a class="nav-item nav-link <?=$nav_index ?? '';?>" href="index.php" aria-current="page">Home</a>
+            <a class="nav-item nav-link <?=$nav_icat ?? '';?>" href="icat.php">ICAT</a>
+        </div>
+    </div>
+    <?php if (isset($nav_index) && !isset($_SESSION['user'])):?>
+     <button type="button" class="btn btn-primary mx-3" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+    <?php endif; ?>
+    <?php if (isset($_SESSION['user'])):?>
+        <button type="button" id="logout-button" class="btn btn-primary mx-3">Logout</button>
+    <?php endif; ?>
+</nav>
+---
+server\icat directory(where api/ajax requests are handled)
+
+server\icat\applicant.php--
+<?php
+require_once './Main.php';
+require '../vendor/autoload.php';
+use PhpOffice\PhpSpreadsheet\IOFactory;
+header('Content-Type: application/json');
+global $db;
+
+// Pre data
+$applicantFields = [
+    ['fieldName' => 'Applicant No', 'fieldId' => 'import_ApplicantNo', 'placeholder' => 'Enter applicant number', 'db_col_name' => 'applicant_no'],
+    ['fieldName' => 'Lastname', 'fieldId' => 'import_Lastname', 'placeholder' => 'Enter last name', 'db_col_name' => 'lastname'],
+    ['fieldName' => 'Firstname', 'fieldId' => 'import_Firstname', 'placeholder' => 'Enter first name', 'db_col_name' => 'firstname'],
+    ['fieldName' => 'Middlename', 'fieldId' => 'import_Middlename', 'placeholder' => 'Enter middle name', 'db_col_name' => 'middlename'],
+    ['fieldName' => 'Suffix', 'fieldId' => 'import_Suffix', 'placeholder' => 'Enter suffix', 'db_col_name' => 'suffix'],
+    ['fieldName' => 'Sex', 'fieldId' => 'import_Sex', 'placeholder' => 'Enter sex', 'db_col_name' => 'sex'],
+    ['fieldName' => 'Strand Name', 'fieldId' => 'import_StrandName', 'placeholder' => 'Enter valid strand', 'db_col_name' => 'strand_id'],
+    ['fieldName' => '1st Course Nickname', 'fieldId' => 'import_Course1Nickname', 'placeholder' => 'Enter a valid course', 'db_col_name' => 'course_1_id'],
+    ['fieldName' => '2nd Course Nickname', 'fieldId' => 'import_Course2Nickname', 'placeholder' => 'Enter a valid course', 'db_col_name' => 'course_2_id'],
+    ['fieldName' => '3rd Course Nickname', 'fieldId' => 'import_Course3Nickname', 'placeholder' => 'Enter a valid course', 'db_col_name' => 'course_3_id']
+];
+$requiredFields = ['Applicant No', 'Lastname', 'Firstname', 'Sex', '1st Course Nickname'];
+$sex = ["Male", "Female", "Others"];
+
+// Handle GET requests (e.g., viewing a single applicant)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    if (isset($_GET['action']) && $_GET['action'] === 'view' && isset($_GET['id'])) {
+        $id = intval($_GET['id']);
+        $applicant = $db->readOne(
+            'applicants a',
+            [
+                'a.*, 
+                s.name AS strand, 
+                c1.nickname AS course_1, 
+                c2.nickname AS course_2, 
+                c3.nickname AS course_3, 
+                CONCAT(at_.academic_year, " | ", at_.semester) AS application_term'
+            ],
+            [
+                ['column' => 'a.id', 'operator' => '=', 'value' => $id]
+            ],
+            [
+                ['type' => 'LEFT', 'table' => 'strands s', 'condition' => 'a.strand_id = s.id'],
+                ['type' => 'LEFT', 'table' => 'courses c1', 'condition' => 'a.course_1_id = c1.id'],
+                ['type' => 'LEFT', 'table' => 'courses c2', 'condition' => 'a.course_2_id = c2.id'],
+                ['type' => 'LEFT', 'table' => 'courses c3', 'condition' => 'a.course_3_id = c3.id'],
+                ['type' => 'LEFT', 'table' => 'application_term at_', 'condition' => 'a.application_term_id = at_.id']
+            ]
+        );
+        if ($applicant) {
+            echo json_encode(['success' => true, 'data' => $applicant]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Applicant not found']);
+        }
+        exit;
+    } 
+
+    // Handle multi-view request
+    if (isset($_GET['action']) && $_GET['action'] === 'view_multi' && isset($_GET['ids'])) {
+        $ids = $_GET['ids'];
+    
+        // Ensure $ids is an array and sanitize the input
+        if (!is_array($ids)) {
+            echo json_encode(['success' => false, 'error' => 'Invalid IDs format']);
+            http_response_code(400);
+            exit;
+        }
+    
+        $sanitizedIds = array_map('intval', $ids); // Sanitize IDs to ensure they are integers
+
+        // Fetch multiple applicants
+        $applicants = $db->readAll(
+            'applicants a',
+            [
+                'a.*, 
+                s.name AS strand, 
+                c1.nickname AS course_1, 
+                c2.nickname AS course_2, 
+                c3.nickname AS course_3, 
+                CONCAT(at_.academic_year, " | ", at_.semester) AS application_term'
+            ],
+            [
+                ['column' => 'a.id', 'operator' => 'IN', 'value' => $sanitizedIds]
+            ],
+            [
+                ['type' => 'LEFT', 'table' => 'strands s', 'condition' => 'a.strand_id = s.id'],
+                ['type' => 'LEFT', 'table' => 'courses c1', 'condition' => 'a.course_1_id = c1.id'],
+                ['type' => 'LEFT', 'table' => 'courses c2', 'condition' => 'a.course_2_id = c2.id'],
+                ['type' => 'LEFT', 'table' => 'courses c3', 'condition' => 'a.course_3_id = c3.id'],
+                ['type' => 'LEFT', 'table' => 'application_term at_', 'condition' => 'a.application_term_id = at_.id']
+            ]
+        );
+        if ($applicants) {
+            echo json_encode(['success' => true, 'data' => $applicants]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'No applicants found']);
+        }
+        exit;   
+    } 
+    if (isset($_GET['action']) && $_GET['action'] === 'load_import_fields'){
+        $response = [
+            'success' => true,
+            'fields' => $applicantFields
+        ];
+        echo json_encode($response);
+        http_response_code(200);
+        exit;
+    }
+    if (isset($_GET['action']) && $_GET['action'] === 'get_strand_and_course'){
+        $response = [];
+        $response['strands'] = $db->readAll('strands', ['id', 'name']);
+        $response['courses'] = $db->readAll('courses', ['id', 'nickname']);
+        echo json_encode($response);
+        http_response_code(200);
+        exit;
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Invalid action or missing parameters']);
+        http_response_code(400);
+        exit;   
+    }
+    
+}
+
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // DataTables request
+    if ($_POST['action'] === 'datatable') {
+        $columns = [
+            'a.applicant_no',
+            'a.lastname',
+            'a.firstname',
+            'a.middlename',
+            'a.suffix',
+            'a.sex',
+            's.name AS strand',
+            'c1.nickname AS course_1',
+            'c2.nickname AS course_2',
+            'c3.nickname AS course_3',
+            'IF(tr.applicant_id IS NOT NULL, "Taken", "Not Taken") AS test_status',
+            'a.id AS application_id'
+        ];
+
+        $joins = [
+            ['type' => 'LEFT', 'table' => 'strands s', 'condition' => 'a.strand_id = s.id'],
+            ['type' => 'LEFT', 'table' => 'courses c1', 'condition' => 'a.course_1_id = c1.id'],
+            ['type' => 'LEFT', 'table' => 'courses c2', 'condition' => 'a.course_2_id = c2.id'],
+            ['type' => 'LEFT', 'table' => 'courses c3', 'condition' => 'a.course_3_id = c3.id'],
+            ['type' => 'LEFT', 'table' => 'test_results tr', 'condition' => 'a.id = tr.applicant_id']
+        ];
+
+        // Pagination parameters
+        $start = intval($_POST['start'] ?? 0);
+        $length = intval($_POST['length'] ?? 10);
+
+        // Search parameter
+        $searchValue = $_POST['search']['value'] ?? '';
+
+        // Order parameters
+        $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
+        $orderDirection = $_POST['order'][0]['dir'] ?? 'asc';
+        $orderColumn = $columns[$orderColumnIndex];
+
+        // Build WHERE clause for search
+        $where = [];
+        if (!empty($searchValue)) {
+            $where[] = [
+                'column' => 'CONCAT(a.applicant_no, " ", a.lastname, " ", a.firstname, " ", a.middlename)',
+                'operator' => 'LIKE',
+                'value' => "%$searchValue%"
+            ];
+        }
+
+        // Add application term filter if provided
+        if (!empty($_POST['application_term'])) {
+            $where[] = [
+                'column' => 'a.application_term_id',
+                'operator' => '=',
+                'value' => $_POST['application_term']
+            ];
+        }
+
+        // Fetch filtered data
+        $data = $db->readAll('applicants a', $columns, $where, $joins, $length, $start, [$orderColumn => $orderDirection]);
+
+        // Fetch total records
+        $totalRecords = $db->count('applicants a');
+        $filteredRecords = $db->count('applicants a', $where, $joins);
+
+        // Return JSON response
+        echo json_encode([
+            'draw' => intval($_POST['draw'] ?? 0),
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $filteredRecords,
+            'data' => $data
+        ]);
+        exit;
+    } elseif (isset($_POST['action'])) {
+        $action = $_POST['action'];
+        switch ($action) {
+            case 'add':
+                $data = [
+                    'applicant_no' => $_POST['applicant_no'],
+                    'application_term_id' => $_POST['application_term_id'],
+                    'lastname' => $_POST['lastname'],
+                    'firstname' => $_POST['firstname'],
+                    'middlename' => $_POST['middlename'],
+                    'suffix' => $_POST['suffix'],
+                    'sex' => $_POST['sex'],
+                    'strand_id' => $_POST['strand_id'],
+                    'course_1_id' => $_POST['course_1_id'],
+                    'course_2_id' => $_POST['course_2_id'] ?? null,
+                    'course_3_id' => $_POST['course_3_id'] ?? null
+                ];
+                $result = $db->create('applicants', $data);
+                echo json_encode(['success' => $result !== false]);
+                break;
+            case 'edit':
+                $id = intval($_POST['id']);
+                $data = [
+                    'applicant_no' => $_POST['applicant_no'],
+                    'lastname' => $_POST['lastname'],
+                    'firstname' => $_POST['firstname'],
+                    'middlename' => $_POST['middlename'],
+                    'suffix' => $_POST['suffix'],
+                    'sex' => $_POST['sex'],
+                    'strand_id' => $_POST['strand_id'],
+                    'course_1_id' => $_POST['course_1_id'],
+                    'course_2_id' => $_POST['course_2_id'],
+                    'course_3_id' => $_POST['course_3_id'],
+                    'application_term_id' => $_POST['application_term_id']
+                ];
+                $result = $db->update('applicants', $data, 
+                    [['column' =>'id', 'operator' => '=', 'value' => $id]]
+                );
+
+                if ($result) {
+                    echo json_encode(['success' => true]);
+                    http_response_code(200);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Failed to update applicant']);
+                    http_response_code(500);
+                }
+                break;
+
+            case 'delete_single':
+                if (!isset($_POST['id'])) {
+                    echo json_encode(['success' => false, 'error' => 'No applicant to be deleted']);
+                    http_response_code(400);
+                    break;
+                }
+                $id = intval($_POST['id']);
+
+                $result = $db->delete('applicants',
+                    [['column' =>'id', 'operator' => '=', 'value' => $id]]
+                );
+                if ($result) {
+                    echo json_encode(['success' => true]);
+                    http_response_code(200);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Failed to delete applicant']);
+                    http_response_code(500);
+                }
+                break;
+
+            case 'delete_multi':
+                if (!isset($_POST['ids'])) {
+                    echo json_encode(['success' => false, 'error' => 'No applicants to be deleted']);
+                    http_response_code(400);
+                    break;
+                }
+                $ids = $_POST['ids'];
+                // Ensure $ids is an array and sanitize the input
+                if (!is_array($ids)) {
+                    echo json_encode(['success' => false, 'error' => 'Invalid IDs format']);
+                    http_response_code(400);
+                    exit;
+                }
+                $sanitizedIds = array_map('intval', $ids); // Sanitize IDs to ensure they are integers
+                $result = $db->delete('applicants',
+                    [['column' =>'id', 'operator' => 'IN', 'value' => $sanitizedIds]]
+                );
+                if ($result) {
+                    echo json_encode(['success' => true]);
+                    http_response_code(200);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Failed to delete applicants']);
+                    http_response_code(500);
+                }
+                break;
+
+            case 'import_samples_metadata':
+                $headerRowNumber = intval($_POST['header_row_number']);
+                $file = $_FILES['import_file'];
+                // Load the file and convert it to an array (use PhpSpreadsheet or similar library)
+                try { 
+                    $spreadsheet = IOFactory::load($file['tmp_name']);
+                    $sheet = $spreadsheet->getActiveSheet();
+                    $data = $sheet->toArray();
+                    
+                    // Extract headers from the specified row
+                    $headers = $data[$headerRowNumber - 1] ?? null ; // Adjust for zero-based index
+                    // Check if it is not null
+                    if ($headers === null) {
+                        echo json_encode(['success' => false, 'error' => 'Header row is empty']);
+                        http_response_code(400);
+                        exit;
+                    }
+                    
+                    // Encode headers as { headerData, headerIndex }
+                    $encodedHeaders = [];
+                    foreach ($headers as $index => $header) {
+                        $encodedHeaders[] = [
+                            'headerData' => $header,
+                            'headerIndex' => $index
+                        ];
+                    }
+                    echo json_encode(['success' => true, 'headers' => $encodedHeaders]);
+                } catch (Exception $e) {
+                    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                }
+                break;
+            case 'import_samples':
+                // Json decode applicant_fields
+                $applicantFields = json_decode($_POST['applicant_fields']); // [fieldName, fieldId, headerIndex]
+                // Get the data row start
+                $dataRowStart = intval($_POST['data_row_start']);
+                // Validate and process the applicant fields
+                $discontinueErr = [];
+                foreach ($applicantFields as $key => $field) {
+                    if (isset($field->headerIndex)) {
+                        $applicantFields[$key]->headerIndex = intval($field->headerIndex); // Convert to integer index
+                    } else {
+                        if (in_array($field->fieldName, $requiredFields)) {
+                            $discontinueErr[] = $field->fieldName;
+                        }
+                    }
+                }
+                if (!empty($discontinueErr)){ 
+                    $errorMsg =  "Missing headers for field: " . implode(", ", $discontinueErr);
+                    echo json_encode(['success' => false, 'error' => $errorMsg ]);
+                    break;
+                }
+                // Samples
+                $samples = [];
+                // Check if post existing_samples exist
+                $existingSamples = json_decode($_POST['samples']);
+                if (!empty($existingSamples)) {
+                    foreach ($existingSamples as $key => $sample) {
+                        foreach ($sample as $fieldIdx => $field){
+                            $samples[$key][$fieldIdx] = $field;
+                            if (empty($field->data) && in_array($field->fieldName, $requiredFields)) {
+                                $samples[$key][$fieldIdx]->error  = "Field is required";
+                            } else {
+                                $samples[$key][$fieldIdx]->error  = null; // No error for other fields
+                            }                            
+                        }
+                    }
+                } else {
+                    // Get the uploaded file
+                    $file = $_FILES['import_file'];
+                    if (!isset($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
+                        echo json_encode(['success' => false, 'error' => 'Missing or invalid file upload']);
+                        http_response_code(400);
+                        break;
+                    }
+                    
+                   
+                    try {
+                        // Load the spreadsheet
+                        $spreadsheet = IOFactory::load($file['tmp_name']);
+                        $sheet = $spreadsheet->getActiveSheet();
+                        $data = $sheet->toArray();
+
+                        // Extract data rows starting from the specified data row up untl the end
+                        // Adjust for zero-based index
+                        if ($dataRowStart < 1 || $dataRowStart > count($data)) {
+                            echo json_encode(['success' => false, 'error' => 'Invalid data row start']);
+                            http_response_code(400);
+                            break;
+                        }
+                        $dataRows = array_slice($data, $dataRowStart - 1); // Adjust for zero-based index
+
+                        // Process each row
+                        foreach ($dataRows as $rowIndex => $row) {
+                            foreach ($applicantFields as $fieldIndex => $field) {
+                                $headerIndex = $field->headerIndex;
+
+                                // Check if the column-data exists in the current row
+                                $samples[$rowIndex][$fieldIndex]['fieldName'] = $field->fieldName;
+                                $samples[$rowIndex][$fieldIndex]['placeholder'] = $field->placeholder;
+                                $samples[$rowIndex][$fieldIndex]['db_col_name'] = $field->db_col_name;
+                                $samples[$rowIndex][$fieldIndex]['fieldId'] = $field->fieldId . '_' . $rowIndex; // Unique field ID for each row
+                                if (isset($row[$headerIndex])) {
+                                    $samples[$rowIndex][$fieldIndex]['data'] = trim($row[$headerIndex]); // Trim whitespace
+                                } else {
+                                    $samples[$rowIndex][$fieldIndex]['data'] = '';
+                                }
+
+
+                                $value = trim($samples[$rowIndex][$fieldIndex]['data'] ?? '');
+                                 // Check if the field is required
+
+                                // Check if Courses and Strand are equivalent to existing strands or courses
+                                if (stripos($field->fieldName, 'course') !== false) {
+                                    $courses = $db->readAll('courses', ['id', 'nickname as name']) ?? null;
+                                    $samples[$rowIndex][$fieldIndex]['options'] = $courses; 
+                                    $courseExist = false;
+                                    foreach ($courses as $course){
+                                        if (strtolower($value) == strtolower($course['name'])){
+                                            $samples[$rowIndex][$fieldIndex]['data'] = $course['id'];
+                                            $courseExist = true;
+                                        }
+                                    }
+                                    if (!$courseExist) {
+                                        $samples[$rowIndex][$fieldIndex]['data'] = null;
+                                        $samples[$rowIndex][$fieldIndex]['error'] = "Course does not exist";
+                                    } else {
+                                        $samples[$rowIndex][$fieldIndex]['error'] = null;
+                                    }
+                                // Validate strand name if it's a strand field
+                                } elseif ($field->fieldName == 'Strand Name') {
+                                    $strands = $db->readAll('strands', ['id', 'name']) ?? null;
+                                    $samples[$rowIndex][$fieldIndex]['options'] = $strands; 
+                                    $strandExist = false;
+                                    foreach ($strands as $strand){
+                                        if (strtolower($value) == strtolower($strand['name'])){
+                                            $samples[$rowIndex][$fieldIndex]['data'] = $strand['id'];
+                                            $strandExist = true;
+                                        }
+                                    }
+                                    if (!$strandExist) {
+                                        $samples[$rowIndex][$fieldIndex]['data'] = null;
+                                        $samples[$rowIndex][$fieldIndex]['error'] = "Strand does not exist";
+                                    } else {
+                                        $samples[$rowIndex][$fieldIndex]['error'] = null;
+                                    }
+                                } elseif ($field->fieldName == 'Sex') {
+                                    $sexOptions = array_map(function($value) {
+                                        return ["id" => $value, "name" => $value];
+                                    }, $sex); // $sex = ["Male", "Female", "Others"]
+                                
+                                    $samples[$rowIndex][$fieldIndex]['options'] = $sexOptions; 
+                                
+                                    $rawSexData = trim(strtolower($samples[$rowIndex][$fieldIndex]['data'] ?? ''));
+                                    $sexMap = ["m" => "Male", "f" => "Female", "o" => "Others"];
+                                    $sexData = $sexMap[$rawSexData] ?? ucfirst($rawSexData); // fallback: capitalize if not in map
+                                
+                                    // Extract valid values from options for comparison
+                                    $validSexValues = array_column($sexOptions, 'id');
+                                
+                                    if (in_array($sexData, $validSexValues)) {
+                                        $samples[$rowIndex][$fieldIndex]['data'] = $sexData;
+                                        $samples[$rowIndex][$fieldIndex]['error'] = null;
+                                    } else {
+                                        $samples[$rowIndex][$fieldIndex]['data'] = null;
+                                        $samples[$rowIndex][$fieldIndex]['error'] = "Invalid sex";
+                                    }
+                                }
+
+                                if (empty($samples[$rowIndex][$fieldIndex]['data']) && in_array($field->fieldName, $requiredFields)) {
+                                    $samples[$rowIndex][$fieldIndex]['error'] = "Field is empty";
+                                } else {
+                                    $samples[$rowIndex][$fieldIndex]['error'] = null;
+                                }
+                            }
+                        }
+                    } catch (Exception $e) {
+                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        http_response_code(500);
+                    }
+                }
+                echo json_encode(['success' => true, 'samples' => $samples]);
+                break;
+            case 'import_applicants':
+                $applicantTermId = intval($_POST['application_term_id']);
+                $applicantTermExists = $db->readOne('application_term', ['id'], [["column" => "id", "operator" => "=", "value" => $applicantTermId]]);
+                if (empty($applicantTermExists)){
+                    echo json_encode(['success' => false, 'error' => 'Application term does not exist']);
+                    break;
+                }
+                $applicants = json_decode($_POST['applicants']);
+                $applicantsData = [];
+                foreach ($applicants as $applicantIndex => $applicant) {
+                    $row = []; // initialize properly
+                    foreach ($applicant as $info) {
+                        if (!empty($info->data)) {
+                            $row[$info->db_col_name] = $info->data;
+                        }
+                    }
+                    $row['application_term_id'] = intval($applicantTermId); // Add term
+                    $applicantsData[$applicantIndex] = $row;
+                }
+                $addedApplicantes = $db->createMulti('applicants', $applicantsData);
+                print_r($applicantsData);
+                if (!$addedApplicantes) {
+                    echo json_encode(['success' => false, 'error' => 'An error occured while adding applicants.']);
+                } else {
+                    echo json_encode(['success' => true, 'message' => 'Successfully added applicants!']);
+                }
+                break;
+        default:
+            echo json_encode(['success' => false, 'error' => 'Invalid action']);
+            break;
+        }
+        exit;
+    } else {
+        echo json_encode(['success' => false, 'error' => 'No action specified']);
+        http_response_code(400);
+        exit;
+    }
+} else {
+    echo json_encode(['success' => false, 'error' => 'Method Not Allowed']);
+    http_response_code(405);
+    exit;
+}
+?>
+
+server\icat\Main.php--
+<nav class="navbar navbar-expand navbar-light bg-light sticky-top">
+    <div class="w-50 d-block d-md-none">
+        <button class=" btn btn-primary m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    <div class="container justify-content-center">
+        <div class="nav navbar-nav">
+            <a class="nav-item nav-link <?=$nav_index ?? '';?>" href="index.php" aria-current="page">Home</a>
+            <a class="nav-item nav-link <?=$nav_icat ?? '';?>" href="icat.php">ICAT</a>
+        </div>
+    </div>
+    <?php if (isset($nav_index) && !isset($_SESSION['user'])):?>
+     <button type="button" class="btn btn-primary mx-3" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+    <?php endif; ?>
+    <?php if (isset($_SESSION['user'])):?>
+        <button type="button" id="logout-button" class="btn btn-primary mx-3">Logout</button>
+    <?php endif; ?>
+</nav>
+
+server\db.php--
+<?php
+class Database {
+    private $host = 'localhost';
+    private $db_name = 'guidance_db';
+    private $username = 'root';
+    private $password = '';
+    protected $conn;
+
+    private $db;
+    private $stmt;
+    private $table;
+    
+    public function __construct($table = null){
+        $dsn = "mysql: host=" . $this->host . ";dbname=" . $this->db_name;
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        ];
+        $this->table = $table;
+        try{
+            $this->db = new PDO($dsn, $this->username, $this->password, $options);
+        } catch (PDOException $e){
+            throw new RuntimeException("Database failed to connect: " . $e->getMessage());
+        }
+    }
+
+    // Executes a raw query on the database
+    public function query($sqlCode) {
+        try {
+            $this->stmt = $this->db->prepare($sqlCode);
+            return $this->stmt->execute();
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    // Returns the ID of the last inserted row
+    public function getLastId() {
+        try {
+            return $this->db->lastInsertId();
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
+    // Bind helper function
+    public function bind($stmt, $parameter, $value, $type = "") {
+        if (is_array($value) || is_object($value)) {
+            throw new InvalidArgumentException("Cannot bind array or object to SQL parameter");
+        }
+    
+        if (empty($type)) {
+            switch (true) {
+                case is_int($value):
+                    $type = PDO::PARAM_INT;
+                    break;
+                case is_bool($value):
+                    $type = PDO::PARAM_BOOL;
+                    break;
+                case is_null($value):
+                    $type = PDO::PARAM_NULL;
+                    break;
+                default:
+                    $type = PDO::PARAM_STR;
+                    break;
+            }
+        }
+    
+        $stmt->bindValue($parameter, $value, $type); // Use bindValue instead of bindParam
+    }
+    
+
+    public function count($table, $where = [], $joins = []) {
+        $table = $table ?? $this->table;
+        try {
+            // Use buildQuery to construct the query
+            $result = $this->buildQuery($table, ['COUNT(*) AS total'], $where, $joins);
+            if (!$result) {
+                return 0;
+            }
+    
+            $stmt = $result['stmt'];
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row['total'] ?? 0;
+        } catch (PDOException $e) {
+            return 0;
+        }
+    }
+
+    // Read helper function
+        // Example:
+        // Columns -> ['col1','col2',...]
+        // Joins -> [ ["type" => "", "table" => "", "condition" => "" ], [],... ]
+        // Where -> ["column" => "", "operator" => "", "value" => "" ]
+    private function buildQuery($table, $columns = [], $where = [], $joins = [], $limit = null, $offset = null, $order = []) {
+        $table = $table ?? $this->table;
+        try {
+            // Build SELECT clause
+            $select = empty($columns) || $columns === "*" ? '*' : implode(', ', $columns);
+    
+            // Build FROM clause
+            $from = $table;
+    
+            // Build JOIN clauses
+            $joinStmt = '';
+            foreach ($joins as $join) {
+                if (!isset($join['type'], $join['table'], $join['condition'])) {
+                    throw new PDOException('Invalid join parameters');
+                }
+                $joinStmt .= " {$join['type']} JOIN {$join['table']} ON {$join['condition']}";
+            }
+    
+            // Build WHERE clause
+            $whereConditions = [];
+            $bindValues = [];
+            foreach ($where as $condition) {
+                if (!isset($condition['column'], $condition['operator'], $condition['value'])) {
+                    throw new PDOException('Invalid where condition');
+                }
+            
+                if ($condition['operator'] === 'IN' && is_array($condition['value'])) {
+                    $placeholders = implode(', ', array_fill(0, count($condition['value']), '?'));
+                    $whereConditions[] = "{$condition['column']} IN ($placeholders)";
+                    $bindValues = array_merge($bindValues, $condition['value']);
+                } else {
+                    $whereConditions[] = "{$condition['column']} {$condition['operator']} ?";
+                    $bindValues[] = $condition['value'];
+                }
+            }
+            $whereStmt = empty($whereConditions) ? '' : ' WHERE ' . implode(' AND ', $whereConditions);
+    
+            // Build ORDER BY clause
+            $orderStmt = '';
+            if (!empty($order)) {
+                $orderParts = [];
+                foreach ($order as $column => $direction) {
+                    $orderParts[] = "$column $direction";
+                }
+                $orderStmt = ' ORDER BY ' . implode(', ', $orderParts);
+            }
+    
+            // Build LIMIT and OFFSET clause
+            $limitStmt = '';
+            if ($limit !== null) {
+                $limitStmt = " LIMIT $limit";
+                if ($offset !== null) {
+                    $limitStmt .= " OFFSET $offset";
+                }
+            }
+    
+            // Build SQL query
+            $sql = "SELECT $select FROM $from $joinStmt $whereStmt $orderStmt $limitStmt";
+    
+            // Prepare statement
+            $stmt = $this->db->prepare($sql);
+    
+            // Bind where values
+            foreach ($bindValues as $index => $value) {
+                $this->bind($stmt, $index + 1, $value);
+            }
+    
+            return ['stmt' => $stmt, 'sql' => $sql];
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+    // Read helper: Returns one result or false
+    public function readOne($table, $columns = [],  $where = [], $joins = []) {
+        $table = $table ?? $this->table;
+        try {
+            if (empty($where)) {
+                return false; // No where condition provided
+            }
+    
+            $result = $this->buildQuery($table, $columns, $where, $joins);
+            if (!$result) {
+                return false;
+            }
+    
+            $stmt = $result['stmt'];
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row !== false ? $row : false;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+    
+    // Read helper: Returns multiple results or empty array
+    public function readAll($table, $columns = [], $where = [], $joins = [], $limit = null, $offset = null, $order = []) {
+        $table = $table ?? $this->table;
+        try {
+            $result = $this->buildQuery($table, $columns, $where, $joins, $limit, $offset, $order);
+            if (!$result) {
+                return [];
+            }
+    
+            $stmt = $result['stmt'];
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    // Create function (returns last inserted ID on success)
+    public function create($table, $data) {
+        $table = $table ?? $this->table;
+        $columns = array_keys($data);
+        $values = array_values($data);
+        try {
+            $sql = "INSERT INTO " . $table . " (" . implode(",", $columns) . ") VALUES (" . implode(",", array_fill(0, count($columns), "?")) . ")";
+            $stmt = $this->db->prepare($sql);
+            foreach ($values as $index => $value) {
+                $this->bind($stmt, $index + 1, $value);
+            }
+            $success = $stmt->execute();
+            return $success ? $this->getLastId() : false;
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    // Create data at once
+    public function createMulti($table, $data) {
+        $table = $table ?? $this->table;
+    
+        try {
+            // Ensure $data is a non-empty array of arrays
+            if (empty($data) || !is_array($data) || !is_array($data[0])) {
+                throw new InvalidArgumentException("Invalid data format. Must be an array of arrays.");
+            }
+    
+            // Step 1: Collect all unique column keys across all rows
+            $allKeys = [];
+            foreach ($data as $row) {
+                $allKeys = array_unique(array_merge($allKeys, array_keys($row)));
+            }
+    
+            // Step 2: Normalize rows (ensure every row has all keys, fill with nulls)
+            foreach ($data as &$row) {
+                foreach ($allKeys as $key) {
+                    if (!array_key_exists($key, $row)) {
+                        $row[$key] = null;
+                    }
+                }
+                // Optional: Keep consistent order
+                ksort($row);
+            }
+            unset($row); // Break reference
+    
+            // Step 3: Prepare column names and value placeholders
+            $columns = $allKeys;
+            $rowPlaceholders = "(" . implode(",", array_fill(0, count($columns), "?")) . ")";
+            $allPlaceholders = implode(",", array_fill(0, count($data), $rowPlaceholders));
+    
+            // Step 4: Flatten all values for binding
+            $values = [];
+            foreach ($data as $row) {
+                // Make sure order of values matches column order
+                $orderedRow = [];
+                foreach ($columns as $col) {
+                    $orderedRow[] = $row[$col];
+                }
+                $values = array_merge($values, $orderedRow);
+            }
+    
+            // Step 5: Build and execute SQL
+            $sql = "INSERT INTO `$table` (" . implode(",", $columns) . ") VALUES $allPlaceholders";
+    
+            // Optional: Debugging
+            error_log("SQL Query: $sql");
+            error_log("Values: " . print_r($values, true));
+    
+            $stmt = $this->db->prepare($sql);
+            foreach ($values as $index => $value) {
+                $this->bind($stmt, $index + 1, $value);
+            }
+    
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("CreateMulti PDO Error: " . $e->getMessage());
+            print_r ($e->getMessage());
+            return false;
+        } catch (InvalidArgumentException $e) {
+            error_log("CreateMulti Argument Error: " . $e->getMessage());
+            print_r ($e->getMessage());
+            return false;
+        }
+    }
+    
+    
+
+    public function update($table, $data, $where) {
+        $table = $table ?? $this->table;
+        try {
+            if (empty($data) || empty($where)) {
+                throw new InvalidArgumentException("No data or where condition provided for update.");
+            }
+    
+            // Prepare SET clause
+            $setParts = [];
+            $bindValues = []; // This will hold all bind values (data + where)
+            foreach ($data as $column => $value) {
+                $setParts[] = "`$column` = ?";
+                $bindValues[] = $value; // Add data values to bindValues
+            }
+            $setStmt = implode(", ", $setParts);
+    
+            // Prepare WHERE clause
+            $whereConditions = [];
+            foreach ($where as $condition) {
+                if (!isset($condition['column'], $condition['operator'], $condition['value'])) {
+                    throw new InvalidArgumentException("Invalid where condition.");
+                }
+    
+                if ($condition['operator'] === 'IN' && is_array($condition['value'])) {
+                    $placeholders = implode(', ', array_fill(0, count($condition['value']), '?'));
+                    $whereConditions[] = "`{$condition['column']}` IN ($placeholders)";
+                    $bindValues = array_merge($bindValues, $condition['value']); // Add WHERE IN values to bindValues
+                } else {
+                    $whereConditions[] = "`{$condition['column']}` {$condition['operator']} ?";
+                    $bindValues[] = $condition['value']; // Add WHERE values to bindValues
+                }
+            }
+            $whereStmt = implode(" AND ", $whereConditions);
+    
+            // Build SQL query
+            $sql = "UPDATE `$table` SET $setStmt WHERE $whereStmt";
+            $stmt = $this->db->prepare($sql);
+    
+            // Bind all values (data + where)
+            foreach ($bindValues as $index => $value) {
+                $this->bind($stmt, $index + 1, $value);
+            }
+    
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log("Update Error: " . $e->getMessage());
+            return false;
+        } catch (InvalidArgumentException $e) {
+            error_log("Update Error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function delete($table, $where) {
+        $table = $table ?? $this->table;
+        try {
+            if (empty($where)) {
+                return false; // No where condition provided
+            }
+
+            // Build WHERE clause
+            $whereConditions = [];
+            $bindValues = [];
+            foreach ($where as $condition) {
+                if (!isset($condition['column'], $condition['operator'], $condition['value'])) {
+                    throw new PDOException('Invalid where condition');
+                }
+            
+                if ($condition['operator'] === 'IN' && is_array($condition['value'])) {
+                    $placeholders = implode(', ', array_fill(0, count($condition['value']), '?'));
+                    $whereConditions[] = "{$condition['column']} IN ($placeholders)";
+                    $bindValues = array_merge($bindValues, $condition['value']);
+                } else {
+                    $whereConditions[] = "{$condition['column']} {$condition['operator']} ?";
+                    $bindValues[] = $condition['value'];
+                }
+            }
+            $whereStmt = empty($whereConditions) ? '' : ' WHERE ' . implode(' AND ', $whereConditions);
+
+            $sql = "DELETE FROM " . $table . $whereStmt;
+            $stmt = $this->db->prepare($sql);
+             
+            //  Bind Values
+            foreach ($bindValues as $index => $value) {
+                $this->bind($stmt, $index + 1, $value);
+            }
+
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+}
+?>
+
+server\login.php--
+<?php
+header('Content-Type: application/json');
+// Login Authenticate
+
+if(isset($_POST['username']) && isset($_POST['password'])) {
+    require_once 'db.php';
+    $db = new Database();
+
+    $username = htmlspecialchars(strip_tags($_POST['username']));
+    $password = htmlspecialchars(strip_tags($_POST['password']));
+
+    // When verifying login
+    $columns = ['*'];
+    $where = [
+        ['column' => 'username', 'operator' => '=', 'value' => $username],
+        ['column' => 'password', 'operator' => '=', 'value' => $password]
+    ];
+    $user = $db->readOne('adminuser', $columns, $where, [], [], null);
+  
+    if ($user) {
+        $response['success'] = true;
+        session_start();
+        $_SESSION['loginMessage'] = "You have successfully logged in,  " . $user['nickname'] . "!";
+        $_SESSION['user'] = $user;
+        $response['redirectPage'] =  $_SESSION['redirectPage'] ?? 'index.php';
+        unset($_SESSION['redirectPage']);
+    } else {
+        
+        $response['success'] = false;
+        $response['notifMessage'] = 'Username and password do not match.';
+    }
+    echo json_encode($response);
+    exit;
+} else {
+    $response = ['success' => false];
+    $response['notifMessage'] = 'Invalid Login Credentials!';
+    echo json_encode($response);
+    exit;
+}
+?>
+
+server\verify.php--
+<?php
+session_start();
+$user = $_SESSION['user'] ?? null;
+if (!$user) {
+    $redirectDIR  =  'index.php';
+    header("Location: $redirectDIR");
+    $_SESSION['login_popup'] = true; 
+    $_SESSION['redirectPage'] = 'icat.php';
+    exit;
+    }
+?>
+
+---
+src\js\ directory(ajax and frontend javascript mapping here)
+src\js\icat\applicant.js--
+<nav class="navbar navbar-expand navbar-light bg-light sticky-top">
+    <div class="w-50 d-block d-md-none">
+        <button class=" btn btn-primary m-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    <div class="container justify-content-center">
+        <div class="nav navbar-nav">
+            <a class="nav-item nav-link <?=$nav_index ?? '';?>" href="index.php" aria-current="page">Home</a>
+            <a class="nav-item nav-link <?=$nav_icat ?? '';?>" href="icat.php">ICAT</a>
+        </div>
+    </div>
+    <?php if (isset($nav_index) && !isset($_SESSION['user'])):?>
+     <button type="button" class="btn btn-primary mx-3" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+    <?php endif; ?>
+    <?php if (isset($_SESSION['user'])):?>
+        <button type="button" id="logout-button" class="btn btn-primary mx-3">Logout</button>
+    <?php endif; ?>
+</nav>
+
+src\js\icat\main.js--
+$(document).ready(function() {
+    // Restore last selected tab
+    let lastSelected_icatNav = localStorage.getItem('lastSelected_icatNav');
+    if (lastSelected_icatNav) {
+        // Target both sidebarNav and sidebarNavDesktop, find nav-link with matching nav-text
+        $('#sidebarNav, #sidebarNavDesktop').find('.nav-link').each(function() {
+            if ($(this).find('.nav-text').text().trim() === lastSelected_icatNav) {
+                $(this).tab('show'); // Activate the tab using Bootstrap
+            }
+        });
+    }
+
+    // Save clicked nav link to localStorage
+    $('#sidebarNav, #sidebarNavDesktop').on('click', '.nav-link', function() {
+        console.log("wa");
+        lastSelected_icatNav = $(this).find('.nav-text').text().trim(); // Get text from .nav-text
+        localStorage.setItem('lastSelected_icatNav', lastSelected_icatNav);
+    });
+});
+
+src\js\main.js--
+
+// Function to show notification
+function showNotification(status, message) {
+    let statusClass; // Declare statusClass
+    const $notification = $('#notification');
+    const $notifMessage = $('#notifMessage');
+
+    // Set status class based on type
+    switch(status) {
+        case "success":
+            statusClass = "bg-success text-white";
+            break;
+        case "error":
+            statusClass = "bg-danger text-white";
+            break;
+        case "warning":
+            statusClass = "bg-warning text-dark";
+            break;
+        default:
+            statusClass = "bg-light text-dark";
+    }
+
+    $notification
+        .removeClass('d-none bg-light bg-success bg-danger bg-warning text-white text-dark')
+        .addClass('d-block ' + statusClass);
+    $notifMessage.text(message);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $notification
+            .removeClass('d-block ' + statusClass)
+            .addClass('d-none bg-light text-dark');
+    }, 3000); // 3 seconds
+}
+
+// Close button functionality
+$('#closeNotification').on('click', function() {
+    $('#notification').removeClass('d-block').addClass('d-none');
+});
+
+$(document).ready(function() {
+    $('#logout-button').click(function() {
+        $.ajax({
+            url: 'logout.php',
+            success: ()=>{
+                window.location.href = 'index.php';
+            }
+        });
+    });
+});
+
+
+--
+
+
+index.php--
+
+
+
+
+<?php
+session_start();
+include_once 'includes/header.php';
+$nav_index = "active";
+include_once 'includes/navbar.php';
+include_once 'includes/loginForm.php';
+
+if ($_SESSION['login_popup'] ?? false):
+    if(!isset($_SESSION['user'])):?>
+    <script>
+         $(document).ready(function() {
+            $('#loginModal').modal("show");
+         });
+         showNotification('warning', 'Please login to access this page.');
+    </script>
+<?php endif;endif;
+$_SESSION['login_popup'] = false;
+
+?>
+
+<header class="text-center py-5 bg-light">
+    <div class="container">
+      <h1 class="display-4">Welcome to Guidance & Counselling</h1>
+      <p class="lead">Supporting your well-being, academic growth, and personal development.</p>
+      <a href="#" class="btn btn-primary btn-lg">Book a Session</a>
+    </div>
+  </header>
+
+  <section class="py-5">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Mental Health Support</h5>
+              <p class="card-text">Talk to a counselor about anxiety, stress, or emotional concerns in a safe, confidential space.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Career Guidance</h5>
+              <p class="card-text">Explore career options and make informed decisions about your future path with expert advice.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Academic Counselling</h5>
+              <p class="card-text">Get help with time management, study habits, and learning strategies tailored to your needs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<script>
+    $('#submit-login').click(function(e){
+        e.preventDefault();
+        const username = $('#username').val();
+        const password = $('#password').val();
+        if(username && password) {
+            $.ajax({
+                url: 'server/login.php',
+                type: 'POST',
+                data: {username: username, password: password},
+                success: function(response) {
+                    if(response.success) {
+                        window.location.href = response.redirectPage || 'index.php';
+                    } else {
+                        showNotification('warning', response.notifMessage);
+                    }
+                },
+                error: function() {
+                    showNotification('warning', 'An error occurred. Please try again.');
+                }
+            });
+        } else {
+            showNotification('warning', 'Please fill in all fields.');
+        }
+
+    })
+</script>
+
+<?php include_once 'includes/footer.php'?>
+logout.php--
+<?php
+    session_start();
+    unset($_SESSION['user']);
+    session_destroy();
+?>
+---
+pages\icat directory(most like frontend and no js for ajax here..)
+
+pages\icat\ applicants.php--
+
+pages\icat\ exam_results.php--
+
+---
+includes\header.php--
+includes\footer.php--
+includes\icat_sidebar.php--
+includes\loginForm.php--
+includes\navbar.php--
+
+---
+server\icat directory(where api/ajax requests are handled)
+server\icat\applicant.php--
+server\icat\Main.php--
+server\db.php--
+server\login.php--
+server\verify.php--
+
+---
+src\js\ directory(ajax and frontend javascript mapping here)
+src\js\icat\applicant.js--
+src\js\icat\main.js--
+src\js\main.js--
+
+
+--
+

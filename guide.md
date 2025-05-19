@@ -1,0 +1,33 @@
+guidance office system
+- home
+  - examination info
+- icat
+   - dashboard (basic data about applicants with with no test results for specific term)
+   - applicants 
+      features: 
+         - datatable (backend processing for pagination and search and order) (has action buttons of view, edit and delete that redirect to specific modals)
+         - bottom fixed buttons:
+            - add applicant (modal)
+            - delete selected applicant
+            - print applicants(mpdf library)
+               - will have many template to choose from (ex: information, statistics)
+            - import applicants(php/spreadheet lib)
+               - adds applicants from csv file
+   - exam results (imitate just like the applicants)  
+         - datatable (backend processing for pagination and search and order) (has action buttons of view, edit and delete that redirect to specific modals)
+         - bottom fixed buttons:
+            - add exam results  (modal)
+            - delete exam results  selected applicant
+            - print exam results(mpdf library)
+               - will have many template to choose from (ex: information, statistics, certificate)
+               - can also be bulk print meaning one file for all selected exam results... it will display basic applicant info, and then its results, and then remarks 
+            - import exam results(php/spreadheet lib)
+               - adds exam results from csv file (application_no included for matching)
+   - Essential Info
+      - application terms (simple datatable with only crud just like the others)
+      - courses (simple datatable with only crud just like the others)
+      - strands (simple datatable with only crud just like the others)
+
+--- possible added features...
+ - added schedule which will be used to set the exam schedule (date, time, venue) per application term created...
+ - % of applicants already that alread have exam results... (for monitoring on home)
